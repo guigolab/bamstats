@@ -1,9 +1,10 @@
 package main
 
 import (
-	"flag"
 	log "github.com/Sirupsen/logrus"
 	"github.com/bamstats"
+	"github.com/codegangsta/cli"
+	"os"
 )
 
 func check(err error) {
@@ -13,20 +14,56 @@ func check(err error) {
 }
 
 var (
-	cpu        = flag.Int("cpu", 1, "number of cpus to be used")
-	bam        = flag.String("bam", "", "file to read")
-	annotation = flag.String("annotation", "", "bgzip compressed and indexed annotation file")
-	loglevel   = flag.String("loglevel", "warn", "logging level")
+	bam, annotation, loglevel string
+	cpu                       int
 )
 
-func main() {
-	flag.Parse()
-	level, err := log.ParseLevel(*loglevel)
+func run(c *cli.Context) {
+	level, err := log.ParseLevel(loglevel)
 	check(err)
 	log.SetLevel(level)
-	if *bam == "" {
+	if bam == "" {
 		log.Fatal("no file specified")
 	}
-	stats := bamstats.Coverage(*bam, *annotation, *cpu)
+	stats := bamstats.Coverage(bam, annotation, cpu)
 	bamstats.OutputJson(stats)
+}
+
+func main() {
+	app := cli.NewApp()
+	app.Name = "bamstats"
+	app.Usage = "Compute mapping statistics"
+	app.Version = bamstats.Version
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:        "bam, b",
+			Value:       "",
+			Usage:       "input file",
+			Destination: &bam,
+		},
+		cli.StringFlag{
+			Name:        "annotation, a",
+			Value:       "",
+			Usage:       "bgzip compressed and indexed annotation file",
+			Destination: &annotation,
+		},
+		cli.StringFlag{
+			Name:        "loglevel",
+			Value:       "warn",
+			Usage:       "logging level",
+			Destination: &loglevel,
+		},
+		cli.IntFlag{
+			Name:        "cpu, c",
+			Value:       1,
+			Usage:       "number of cpus to be used",
+			Destination: &cpu,
+		},
+	}
+	app.Action = run
+
+	if len(os.Args) == 1 {
+		os.Args = append(os.Args, "help")
+	}
+	app.Run(os.Args)
 }
