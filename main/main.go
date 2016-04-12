@@ -1,10 +1,11 @@
 package main
 
 import (
+	"os"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/bamstats"
 	"github.com/codegangsta/cli"
-	"os"
 )
 
 func check(err error) {
@@ -15,7 +16,7 @@ func check(err error) {
 
 var (
 	bam, annotation, loglevel string
-	cpu                       int
+	cpu, maxBuf               int
 )
 
 func run(c *cli.Context) {
@@ -25,7 +26,8 @@ func run(c *cli.Context) {
 	if bam == "" {
 		log.Fatal("no file specified")
 	}
-	stats := bamstats.Coverage(bam, annotation, cpu)
+	// stats := bamstats.Coverage1(bam, annotation, cpu)
+	stats := bamstats.General(bam, cpu, maxBuf)
 	bamstats.OutputJson(stats)
 }
 
@@ -58,6 +60,12 @@ func main() {
 			Value:       1,
 			Usage:       "number of cpus to be used",
 			Destination: &cpu,
+		},
+		cli.IntFlag{
+			Name:        "max-buf",
+			Value:       100000,
+			Usage:       "maximum buffer size for reading",
+			Destination: &maxBuf,
 		},
 	}
 	app.Action = run
