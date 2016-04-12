@@ -5,6 +5,9 @@ import (
 	"github.com/biogo/hts/bam"
 	"github.com/biogo/hts/sam"
 	"github.com/brentp/bix"
+	"github.com/brentp/irelate"
+  "github.com/brentp/irelate/parsers"
+  I "github.com/brentp/irelate/interfaces"
 	"os"
   "sync"
 )
@@ -69,6 +72,42 @@ func updateCount(r *sam.Record, elems map[string]uint8, st *ElementStats) {
 	st.ExonIntron++
 }
 
+func updateCount1(r *parsers.Bam, elems map[string]uint8, st *ElementStats) {
+	exons, hasExon := elems["exon"]
+	introns, hasIntron := elems["intron"]
+	st.Total++
+	if _, isIntergenic := elems["intergenic"]; isIntergenic {
+		st.Intergenic++
+		return
+	}
+	if hasExon && !hasIntron && exons > 0 {
+		st.Exon++
+		return
+	}
+	if hasIntron && !hasExon && introns > 0 {
+		st.Intron++
+		return
+	}
+	st.ExonIntron++
+}
+
+func worker1(b I.RelatableIterator, anno I.Queryable, out chan ReadStats) {
+	// defer wg.Done()
+  stats := ReadStats{}
+	for record := range irelate.PIRelate(80000, 25000, b, false, func(a I.Relatable) {}, anno) {
+		elements := map[string]uint8{}
+    if record, ok := record.(*parsers.Bam); ok {
+			getElements1(record, record.Related(), elements)
+			if isSplit1(record) {
+				updateCount1(record, elements, &stats.Split)
+			} else {
+				updateCount1(record, elements, &stats.Continuous)
+			}
+    }
+	}
+	out <- stats
+}
+
 func worker(in chan *sam.Record, out chan ReadStats, anno *bix.Bix) {
   defer wg.Done()
   stats := ReadStats{}
@@ -90,13 +129,41 @@ func worker(in chan *sam.Record, out chan ReadStats, anno *bix.Bix) {
   out <- stats
 }
 
+func Coverage1(bamFile string, annotation string, cpu int) ReadStats {
+	// f, err := os.Open(bamFile)
+	// defer f.Close()
+	// check(err)
+	// br, err := bam.NewReader(f, cpu)
+	// if err != nil {
+	// 	return ReadStats{}
+	// }
+	// // hdr := br.Header()
+	b, err := parsers.NewBamQueryable(bamFile)
+	defer b.Close()
+	check(err)
+  anno, err := bix.New(annotation)
+	defer anno.Close()
+	check(err)
+	stats := make(chan ReadStats, cpu)
+
+	q, err := b.Query(location{"chr1",0,12000})
+	check(err)
+	worker1(q, anno, stats)
+	close(stats)
+  st := ReadStats{}
+  st.Merge(stats)
+  return st
+}
+
 func Coverage(bamFile string, annotation string, cpu int) ReadStats {
 	f, err := os.Open(bamFile)
 	defer f.Close()
 	check(err)
 	anno, err := bix.New(annotation, cpu)
+	defer anno.Close()
 	check(err)
 	br, err := bam.NewReader(f, cpu)
+	defer br.Close()
 	check(err)
   input := make([]chan *sam.Record, cpu)
   stats := make(chan ReadStats, cpu)
