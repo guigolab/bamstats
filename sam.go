@@ -2,6 +2,7 @@ package bamstats
 
 import (
 	"github.com/biogo/hts/sam"
+	"github.com/brentp/irelate/parsers"
 )
 
 func isSplit(r *sam.Record) bool {
@@ -13,8 +14,41 @@ func isSplit(r *sam.Record) bool {
 	return false
 }
 
+func isSplit1(r *parsers.Bam) bool {
+	for _, op := range r.Cigar {
+		if op.Type() == sam.CigarSkipped {
+			return true
+		}
+	}
+	return false
+}
+
 func isPrimary(r *sam.Record) bool {
 	return r.Flags&sam.Secondary == 0
+}
+
+func isUnmapped(r *sam.Record) bool {
+	return r.Flags&sam.Unmapped == sam.Unmapped
+}
+
+func isPaired(r *sam.Record) bool {
+	return r.Flags&sam.Paired == sam.Paired
+}
+
+func isProperlyPaired(r *sam.Record) bool {
+	return r.Flags&sam.ProperPair == sam.ProperPair
+}
+
+func isRead1(r *sam.Record) bool {
+	return r.Flags&sam.Read1 == sam.Read1
+}
+
+func isRead2(r *sam.Record) bool {
+	return r.Flags&sam.Read2 == sam.Read2
+}
+
+func hasMateUnmapped(r *sam.Record) bool {
+	return r.Flags&sam.MateUnmapped == sam.MateUnmapped
 }
 
 func getBlocks(r *sam.Record) []location {
