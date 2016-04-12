@@ -2,8 +2,9 @@ package bamstats
 
 import (
 	"encoding/json"
-	log "github.com/Sirupsen/logrus"
 	"os"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func check(err error) {
