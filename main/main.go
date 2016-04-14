@@ -16,7 +16,7 @@ func check(err error) {
 
 var (
 	bam, annotation, loglevel string
-	cpu, maxBuf               int
+	cpu, maxBuf, reads        int
 )
 
 func run(c *cli.Context) {
@@ -27,7 +27,7 @@ func run(c *cli.Context) {
 		log.Fatal("no file specified")
 	}
 	// stats := bamstats.Coverage1(bam, annotation, cpu)
-	stats := bamstats.General(bam, cpu, maxBuf)
+	stats := bamstats.General(bam, cpu, maxBuf, reads)
 	bamstats.OutputJson(stats)
 }
 
@@ -63,9 +63,15 @@ func main() {
 		},
 		cli.IntFlag{
 			Name:        "max-buf",
-			Value:       100000,
-			Usage:       "maximum buffer size for reading",
+			Value:       1000000,
+			Usage:       "maximum number of buffered records",
 			Destination: &maxBuf,
+		},
+		cli.IntFlag{
+			Name:        "n",
+			Value:       -1,
+			Usage:       "number of reads to process",
+			Destination: &reads,
 		},
 	}
 	app.Action = run
