@@ -51,6 +51,10 @@ func hasMateUnmapped(r *sam.Record) bool {
 	return r.Flags&sam.MateUnmapped == sam.MateUnmapped
 }
 
+func isFirstOfValidPair(r *sam.Record) bool {
+	return isPaired(r) && isRead1(r) && isProperlyPaired(r) && !hasMateUnmapped(r)
+}
+
 func getBlocks(r *sam.Record) []location {
 	blocks := make([]location, 0, 10)
 	ref := r.Ref.Name()
