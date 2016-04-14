@@ -15,16 +15,14 @@ import (
 type TagMap map[int]int
 
 type MappedReadsStats struct {
-	Total    int           `json:"total"`
-	Mapped   TagMap        `json:"mapped"`
-	Unmapped int           `json:"unmapped"`
-	Mappings MultimapStats `json:"mappings"`
+	Total    int    `json:"total"`
+	Mapped   TagMap `json:"mapped"`
+	Unmapped int    `json:"unmapped"`
 }
 
-type MappedPairsStats struct {
-	Read1  TagMap `json:"read1"`
-	Read2  TagMap `json:"read2"`
-	Mapped int    `json:"mapped"`
+type MappingsStats struct {
+	MappedReadsStats
+	Mappings MultimapStats `json:"mappings"`
 }
 
 type MultimapStats struct {
@@ -32,42 +30,42 @@ type MultimapStats struct {
 	Ratio float64 `json:"ratio"`
 }
 
-type MappingStats struct {
-	Reads MappedReadsStats `json:"reads"`
-	Pairs MappedPairsStats `json:"pairs"`
+type GeneralStats struct {
+	Reads MappingsStats    `json:"reads"`
+	Pairs MappedReadsStats `json:"pairs"`
 }
 
-func (s *MappingStats) Merge(others chan MappingStats) {
+func (s *GeneralStats) Merge(others chan GeneralStats) {
 	for other := range others {
 		s.Update(other)
 	}
 }
 
-func (s *MappingStats) Update(other MappingStats) {
+func (s *GeneralStats) Update(other GeneralStats) {
 	s.Reads.Update(other.Reads)
 	s.Pairs.Update(other.Pairs)
+	s.Pairs.Total = s.Reads.Total / 2
+	s.Pairs.Unmapped = s.Pairs.Total - s.Pairs.Mapped.Total()
 }
 
 func (s *MappedReadsStats) Update(other MappedReadsStats) {
 	s.Total += other.Total
 	s.Unmapped += other.Unmapped
-	s.Mappings.Count += other.Mappings.Count
 	s.Mapped.Update(other.Mapped)
+}
+
+func (s *MappingsStats) Update(other MappingsStats) {
+	s.MappedReadsStats.Update(other.MappedReadsStats)
+	s.Mappings.Count += other.Mappings.Count
 	s.UpdateMappingsRatio()
 }
 
-func (s *MappedReadsStats) UpdateMappingsRatio() {
+func (s *MappingsStats) UpdateMappingsRatio() {
 	s.Mappings.Ratio = float64(s.Mappings.Count) / float64(s.Mapped.Total())
 }
 
 func (s *MappedReadsStats) Unique() int {
 	return s.Mapped[1]
-}
-
-func (s *MappedPairsStats) Update(other MappedPairsStats) {
-	s.Mapped += other.Mapped
-	s.Read1.Update(other.Read1)
-	s.Read2.Update(other.Read2)
 }
 
 func (s TagMap) Update(other TagMap) {
@@ -88,10 +86,9 @@ func (s TagMap) Total() (sum int) {
 	return
 }
 
-func NewMappingStats() *MappingStats {
-	ms := MappingStats{}
-	ms.Pairs.Read1 = make(TagMap)
-	ms.Pairs.Read2 = make(TagMap)
+func NewGeneralStats() *GeneralStats {
+	ms := GeneralStats{}
+	ms.Pairs.Mapped = make(TagMap)
 	ms.Reads.Mapped = make(TagMap)
 	return &ms
 }
@@ -116,43 +113,33 @@ func (tm TagMap) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (s *MappingStats) Collect(r *sam.Record) {
+func (s *GeneralStats) Collect(r *sam.Record) {
 	NH, hasNH := r.Tag([]byte("NH"))
 	if !hasNH {
 		NH, _ = sam.ParseAux([]byte("NH:i:0"))
 	}
 	NHKey := int(NH.Value().(uint8))
-	if isPrimary(r) {
+	if isUnmapped(r) {
 		s.Reads.Total++
-		if isUnmapped(r) {
-			s.Reads.Unmapped++
-			return
-		}
-		s.Reads.Mappings.Count++
-		s.Reads.Mapped[NHKey]++
-		if isPaired(r) {
-			if isRead1(r) {
-				s.Pairs.Read1[NHKey]++
-				if isProperlyPaired(r) && !hasMateUnmapped(r) {
-					s.Pairs.Mapped++
-				}
-			}
-			if isRead2(r) {
-				s.Pairs.Read2[NHKey]++
-			}
-		}
+		s.Reads.Unmapped++
+		return
 	} else {
-		if !isUnmapped(r) {
-			s.Reads.Mappings.Count++
+		s.Reads.Mappings.Count++
+		if isPrimary(r) {
+			s.Reads.Total++
+			s.Reads.Mapped[NHKey]++
+			if isFirstOfValidPair(r) {
+				s.Pairs.Mapped[NHKey]++
+			}
 		}
 	}
 }
 
 var wgg sync.WaitGroup
 
-func gworker(in chan *sam.Record, out chan MappingStats) {
+func gworker(in chan *sam.Record, out chan GeneralStats) {
 	defer wgg.Done()
-	stats := NewMappingStats()
+	stats := NewGeneralStats()
 	for record := range in {
 		stats.Collect(record)
 	}
@@ -160,9 +147,9 @@ func gworker(in chan *sam.Record, out chan MappingStats) {
 	out <- *stats
 }
 
-func cProc(br *bam.Reader, cpu int, maxBuf int) *MappingStats {
+func cProc(br *bam.Reader, cpu int, maxBuf int, reads int) *GeneralStats {
 	input := make([]chan *sam.Record, cpu)
-	stats := make(chan MappingStats, cpu)
+	stats := make(chan GeneralStats, cpu)
 	for i := 0; i < cpu; i++ {
 		wgg.Add(1)
 		input[i] = make(chan *sam.Record, maxBuf)
@@ -170,25 +157,30 @@ func cProc(br *bam.Reader, cpu int, maxBuf int) *MappingStats {
 	}
 	c := 0
 	for {
+		if reads > -1 && c == reads {
+			break
+		}
 		record, err := br.Read()
 		if err != nil {
 			break
 		}
-		input[c] <- record
-		c = (c + 1) % cpu
+		input[c%cpu] <- record
+		c++
 	}
 	for i := 0; i < cpu; i++ {
 		close(input[i])
 	}
-	wgg.Wait()
-	close(stats)
+	go func() {
+		wgg.Wait()
+		close(stats)
+	}()
 	st := <-stats
 	st.Merge(stats)
 	return &st
 }
 
-func lProc(br *bam.Reader) *MappingStats {
-	st := NewMappingStats()
+func lProc(br *bam.Reader) *GeneralStats {
+	st := NewGeneralStats()
 	for {
 		record, err := br.Read()
 		if err != nil {
@@ -199,12 +191,12 @@ func lProc(br *bam.Reader) *MappingStats {
 	return st
 }
 
-func General(bamFile string, cpu int, maxBuf int) *MappingStats {
+func General(bamFile string, cpu int, maxBuf int, reads int) *GeneralStats {
 	f, err := os.Open(bamFile)
 	defer f.Close()
 	check(err)
 	br, err := bam.NewReader(f, cpu)
 	defer br.Close()
 	check(err)
-	return cProc(br, cpu, maxBuf)
+	return cProc(br, cpu, maxBuf, reads)
 }
