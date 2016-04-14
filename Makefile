@@ -2,10 +2,10 @@
 
 build: main/bamstats main/bamstats-linux
 
-main/bamstats: main/main.go
+main/bamstats: main/main.go *.go
 	@cd main && go build -o bamstats
 
-main/bamstats-linux: main/main.go
+main/bamstats-linux: main/main.go *.go
 	@cd main && GOOS=linux go build -o bamstats-linux
 
 bench:
