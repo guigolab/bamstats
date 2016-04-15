@@ -15,9 +15,9 @@ import (
 type TagMap map[int]int
 
 type MappedReadsStats struct {
-	Total    int    `json:"total"`
-	Mapped   TagMap `json:"mapped"`
-	Unmapped int    `json:"unmapped"`
+	Total    int    `json:"total,omitempty"`
+	Mapped   TagMap `json:"mapped,omitempty"`
+	Unmapped int    `json:"unmapped,omitempty"`
 }
 
 type MappingsStats struct {
@@ -31,8 +31,8 @@ type MultimapStats struct {
 }
 
 type GeneralStats struct {
-	Reads MappingsStats    `json:"reads"`
-	Pairs MappedReadsStats `json:"pairs"`
+	Reads MappingsStats    `json:"reads,omitempty"`
+	Pairs MappedReadsStats `json:"pairs,omitempty"`
 }
 
 func (s *GeneralStats) Merge(others chan GeneralStats) {
@@ -44,8 +44,10 @@ func (s *GeneralStats) Merge(others chan GeneralStats) {
 func (s *GeneralStats) Update(other GeneralStats) {
 	s.Reads.Update(other.Reads)
 	s.Pairs.Update(other.Pairs)
-	s.Pairs.Total = s.Reads.Total / 2
-	s.Pairs.Unmapped = s.Pairs.Total - s.Pairs.Mapped.Total()
+	if len(s.Pairs.Mapped) > 0 {
+		s.Pairs.Total = s.Reads.Total / 2
+		s.Pairs.Unmapped = s.Pairs.Total - s.Pairs.Mapped.Total()
+	}
 }
 
 func (s *MappedReadsStats) Update(other MappedReadsStats) {
@@ -88,9 +90,15 @@ func (s TagMap) Total() (sum int) {
 
 func NewGeneralStats() *GeneralStats {
 	ms := GeneralStats{}
-	ms.Pairs.Mapped = make(TagMap)
-	ms.Reads.Mapped = make(TagMap)
+	ms.Pairs = *NewMappedReadsStats()
+	ms.Reads.MappedReadsStats = *NewMappedReadsStats()
 	return &ms
+}
+
+func NewMappedReadsStats() *MappedReadsStats {
+	s := MappedReadsStats{}
+	s.Mapped = make(TagMap)
+	return &s
 }
 
 func (tm TagMap) MarshalJSON() ([]byte, error) {
@@ -198,5 +206,13 @@ func General(bamFile string, cpu int, maxBuf int, reads int) *GeneralStats {
 	br, err := bam.NewReader(f, cpu)
 	defer br.Close()
 	check(err)
-	return cProc(br, cpu, maxBuf, reads)
+	switch {
+	case cpu <= 0:
+		log.Panic("Number of cpus must be a positive number")
+	case cpu == 1:
+		return lProc(br)
+	case cpu > 1:
+		return cProc(br, cpu, maxBuf, reads)
+	}
+	return nil
 }
