@@ -15,8 +15,8 @@ func check(err error) {
 }
 
 var (
-	bam, annotation, loglevel string
-	cpu, maxBuf, reads        int
+	bam, annotation, loglevel, output string
+	cpu, maxBuf, reads                int
 )
 
 func run(c *cli.Context) {
@@ -28,7 +28,8 @@ func run(c *cli.Context) {
 	}
 	// stats := bamstats.Coverage1(bam, annotation, cpu)
 	stats := bamstats.General(bam, cpu, maxBuf, reads)
-	bamstats.OutputJson(stats)
+	out := bamstats.NewOutput(output)
+	bamstats.OutputJson(out, stats)
 }
 
 func main() {
@@ -72,6 +73,12 @@ func main() {
 			Value:       -1,
 			Usage:       "number of records to process",
 			Destination: &reads,
+		},
+		cli.StringFlag{
+			Name:        "o",
+			Value:       "-",
+			Usage:       "output file",
+			Destination: &output,
 		},
 	}
 	app.Action = run
