@@ -1,7 +1,9 @@
 package bamstats
 
 import (
+	"bufio"
 	"encoding/json"
+	"io"
 	"os"
 
 	log "github.com/Sirupsen/logrus"
@@ -27,8 +29,22 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
-func OutputJson(stats interface{}) {
+func OutputJson(writer io.Writer, stats interface{}) {
 	b, err := json.MarshalIndent(stats, "", "\t")
 	check(err)
-	os.Stdout.Write(b)
+	writer.Write(b)
+	if w, ok := writer.(*bufio.Writer); ok {
+		w.Flush()
+	}
+}
+
+func NewOutput(output string) io.Writer {
+	switch output {
+	case "-":
+		return os.Stdout
+	default:
+		f, err := os.Create(output)
+		check(err)
+		return bufio.NewWriter(f)
+	}
 }
