@@ -3,6 +3,7 @@ package bamstats
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"sync"
@@ -16,23 +17,30 @@ type TagMap map[int]int
 
 type MappedReadsStats struct {
 	Total    int    `json:"total,omitempty"`
-	Mapped   TagMap `json:"mapped,omitempty"`
 	Unmapped int    `json:"unmapped,omitempty"`
+	Mapped   TagMap `json:"mapped,omitempty"`
 }
 
 type MappingsStats struct {
 	MappedReadsStats
-	Mappings MultimapStats `json:"mappings"`
+	Continuous int           `json:"continuous"`
+	Split      int           `json:"split"`
+	Mappings   MultimapStats `json:"mappings"`
+}
+
+type MappedPairsStats struct {
+	MappedReadsStats
+	InsertSizes TagMap `json:"insert_sizes,omitempty"`
 }
 
 type MultimapStats struct {
-	Count int     `json:"count"`
 	Ratio float64 `json:"ratio"`
+	Count int     `json:"count"`
 }
 
 type GeneralStats struct {
 	Reads MappingsStats    `json:"reads,omitempty"`
-	Pairs MappedReadsStats `json:"pairs,omitempty"`
+	Pairs MappedPairsStats `json:"pairs,omitempty"`
 }
 
 func (s *GeneralStats) Merge(others chan GeneralStats) {
@@ -58,8 +66,23 @@ func (s *MappedReadsStats) Update(other MappedReadsStats) {
 
 func (s *MappingsStats) Update(other MappingsStats) {
 	s.MappedReadsStats.Update(other.MappedReadsStats)
+	s.Continuous += other.Continuous
+	s.Split += other.Split
 	s.Mappings.Count += other.Mappings.Count
 	s.UpdateMappingsRatio()
+}
+
+func (s *MappedPairsStats) Update(other MappedPairsStats) {
+	s.MappedReadsStats.Update(other.MappedReadsStats)
+	s.InsertSizes.Update(other.InsertSizes)
+}
+
+func (s *MappedPairsStats) FilterInsertSizes(percent float64) {
+	for k, v := range s.InsertSizes {
+		if float64(v) < float64(s.Total)*(percent/100) {
+			delete(s.InsertSizes, k)
+		}
+	}
 }
 
 func (s *MappingsStats) UpdateMappingsRatio() {
@@ -90,7 +113,7 @@ func (s TagMap) Total() (sum int) {
 
 func NewGeneralStats() *GeneralStats {
 	ms := GeneralStats{}
-	ms.Pairs = *NewMappedReadsStats()
+	ms.Pairs = *NewMappedPairsStats()
 	ms.Reads.MappedReadsStats = *NewMappedReadsStats()
 	return &ms
 }
@@ -98,6 +121,13 @@ func NewGeneralStats() *GeneralStats {
 func NewMappedReadsStats() *MappedReadsStats {
 	s := MappedReadsStats{}
 	s.Mapped = make(TagMap)
+	return &s
+}
+
+func NewMappedPairsStats() *MappedPairsStats {
+	s := MappedPairsStats{}
+	s.MappedReadsStats = *NewMappedReadsStats()
+	s.InsertSizes = make(TagMap)
 	return &s
 }
 
@@ -136,8 +166,15 @@ func (s *GeneralStats) Collect(r *sam.Record) {
 		if isPrimary(r) {
 			s.Reads.Total++
 			s.Reads.Mapped[NHKey]++
+			if isSplit(r) {
+				s.Reads.Split++
+			} else {
+				s.Reads.Continuous++
+			}
 			if isFirstOfValidPair(r) {
 				s.Pairs.Mapped[NHKey]++
+				isLen := int(math.Abs(float64(r.TempLen)))
+				s.Pairs.InsertSizes[isLen]++
 			}
 		}
 	}
