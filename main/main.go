@@ -70,7 +70,7 @@ func main() {
 		cli.IntFlag{
 			Name:        "n",
 			Value:       -1,
-			Usage:       "number of reads to process",
+			Usage:       "number of records to process",
 			Destination: &reads,
 		},
 	}
