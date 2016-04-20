@@ -26,8 +26,7 @@ func run(c *cli.Context) {
 	if bam == "" {
 		log.Fatal("no file specified")
 	}
-	// stats := bamstats.Coverage1(bam, annotation, cpu)
-	stats := bamstats.General(bam, cpu, maxBuf, reads)
+	stats := bamstats.Process(bam, annotation, cpu, maxBuf, reads)
 	out := bamstats.NewOutput(output)
 	bamstats.OutputJson(out, stats)
 }
