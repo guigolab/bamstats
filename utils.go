@@ -15,14 +15,14 @@ func check(err error) {
 	}
 }
 
-func max(a, b uint32) uint32 {
+func max(a, b int) int {
 	if a < b {
 		return b
 	}
 	return a
 }
 
-func min(a, b uint32) uint32 {
+func min(a, b int) int {
 	if a < b {
 		return a
 	}
