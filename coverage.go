@@ -79,7 +79,7 @@ func updateCount(r *sam.Record, elems map[string]uint8, st *ElementStats) {
 	st.ExonIntron++
 }
 
-func (s *ReadStats) Collect(record *sam.Record, trees *RtreeMap) {
+func (s *ReadStats) Collect(record *sam.Record, index *RtreeMap) {
 	if !isPrimary(record) || isUnmapped(record) {
 		return
 	}
@@ -87,7 +87,7 @@ func (s *ReadStats) Collect(record *sam.Record, trees *RtreeMap) {
 	log.Debug(record.Name)
 	for _, mappingPosition := range getBlocks(record) {
 		log.Debug(mappingPosition)
-		results := QueryIndex(trees.Get(mappingPosition.Chrom()), float64(mappingPosition.Start()), float64(mappingPosition.End()), math.MaxFloat64)
+		results := QueryIndex(index.Get(mappingPosition.Chrom()), float64(mappingPosition.Start()), float64(mappingPosition.End()), math.MaxFloat64)
 		getElements(mappingPosition, &results, elements)
 	}
 	if isSplit(record) {

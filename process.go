@@ -13,27 +13,27 @@ import (
 type Stats interface {
 	Update(other Stats)
 	Merge(others chan Stats)
-	Collect(record *sam.Record, trees *RtreeMap)
+	Collect(record *sam.Record, index *RtreeMap)
 }
 
 var wg sync.WaitGroup
 
-func worker(in chan *sam.Record, out chan Stats, trees *RtreeMap) {
+func worker(in chan *sam.Record, out chan Stats, index *RtreeMap) {
 	defer wg.Done()
 	var stats Stats
-	if trees != nil {
+	if index != nil {
 		stats = &ReadStats{}
 	} else {
 		stats = NewGeneralStats()
 	}
 	for record := range in {
-		stats.Collect(record, trees)
+		stats.Collect(record, index)
 	}
 	log.Debug("Worker DONE!")
 	out <- stats
 }
 
-func ReadBAM(bamFile string, trees *RtreeMap, cpu int, maxBuf int, reads int) chan Stats {
+func ReadBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) chan Stats {
 	f, err := os.Open(bamFile)
 	defer f.Close()
 	check(err)
@@ -45,7 +45,7 @@ func ReadBAM(bamFile string, trees *RtreeMap, cpu int, maxBuf int, reads int) ch
 	for i := 0; i < cpu; i++ {
 		wg.Add(1)
 		input[i] = make(chan *sam.Record, maxBuf)
-		go worker(input[i], stats, trees)
+		go worker(input[i], stats, index)
 	}
 	c := 0
 	for {
@@ -66,16 +66,16 @@ func ReadBAM(bamFile string, trees *RtreeMap, cpu int, maxBuf int, reads int) ch
 }
 
 func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) *Stats {
-	var trees *RtreeMap
+	var index *RtreeMap
 	if annotation != "" {
 		log.Infof("Creating index for %s", annotation)
 		start := time.Now()
-		trees = CreateIndex(annotation)
+		index = CreateIndex(annotation)
 		log.Infof("Index done in %v", time.Since(start))
 	}
 	start := time.Now()
 	log.Infof("Collecting stats for %s", bamFile)
-	stats := ReadBAM(bamFile, trees, cpu, maxBuf, reads)
+	stats := ReadBAM(bamFile, index, cpu, maxBuf, reads)
 	go func() {
 		wg.Wait()
 		close(stats)

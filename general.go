@@ -151,7 +151,7 @@ func (tm TagMap) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (s *GeneralStats) Collect(r *sam.Record, trees *RtreeMap) {
+func (s *GeneralStats) Collect(r *sam.Record, index *RtreeMap) {
 	NH, hasNH := r.Tag([]byte("NH"))
 	if !hasNH {
 		NH, _ = sam.ParseAux([]byte("NH:i:0"))
