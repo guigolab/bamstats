@@ -35,8 +35,9 @@ type MultimapStats struct {
 }
 
 type GeneralStats struct {
-	Reads MappingsStats    `json:"reads,omitempty"`
-	Pairs MappedPairsStats `json:"pairs,omitempty"`
+	Reads    MappingsStats    `json:"reads,omitempty"`
+	Pairs    MappedPairsStats `json:"pairs,omitempty"`
+	Coverage *CoverageStats   `json:"coverage,omitempty"`
 }
 
 func (s *GeneralStats) Merge(others chan Stats) {
@@ -51,6 +52,9 @@ func (s *GeneralStats) Update(other Stats) {
 	if other, ok := other.(*GeneralStats); ok {
 		s.Reads.Update(other.Reads)
 		s.Pairs.Update(other.Pairs)
+		if s.Coverage != nil {
+			s.Coverage.Update(other.Coverage)
+		}
 		if len(s.Pairs.Mapped) > 0 {
 			s.Pairs.Total = s.Reads.Total / 2
 			s.Pairs.Unmapped = s.Pairs.Total - s.Pairs.Mapped.Total()

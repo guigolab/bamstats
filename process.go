@@ -18,22 +18,32 @@ type Stats interface {
 
 var wg sync.WaitGroup
 
-func worker(in chan *sam.Record, out chan Stats, index *RtreeMap) {
-	defer wg.Done()
-	var stats Stats
-	if index != nil {
-		stats = &ReadStats{}
-	} else {
-		stats = NewGeneralStats()
+func getStats(stats []Stats) Stats {
+	general := stats[0].(*GeneralStats)
+	general.Coverage = nil
+	if len(stats) > 1 {
+		general.Coverage = stats[1].(*CoverageStats)
 	}
-	for record := range in {
-		stats.Collect(record, index)
-	}
-	log.Debug("Worker DONE!")
-	out <- stats
+	return general
 }
 
-func ReadBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) chan Stats {
+func worker(in chan *sam.Record, out chan Stats, index *RtreeMap) {
+	defer wg.Done()
+	stats := []Stats{NewGeneralStats()}
+	if index != nil {
+		stats = append(stats, NewCoverageStats())
+	}
+	for record := range in {
+		for _, s := range stats {
+			s.Collect(record, index)
+		}
+	}
+	log.Debug("Worker DONE!")
+
+	out <- getStats(stats)
+}
+
+func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) chan Stats {
 	f, err := os.Open(bamFile)
 	defer f.Close()
 	check(err)
@@ -75,7 +85,7 @@ func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) 
 	}
 	start := time.Now()
 	log.Infof("Collecting stats for %s", bamFile)
-	stats := ReadBAM(bamFile, index, cpu, maxBuf, reads)
+	stats := readBAM(bamFile, index, cpu, maxBuf, reads)
 	go func() {
 		wg.Wait()
 		close(stats)

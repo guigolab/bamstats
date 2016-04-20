@@ -3,7 +3,6 @@ package bamstats
 import (
 	"math"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/biogo/hts/sam"
 )
 
@@ -16,21 +15,21 @@ type ElementStats struct {
 	Total      int `json:"total"`
 }
 
-type ReadStats struct {
+type CoverageStats struct {
 	Total      ElementStats `json:"Total reads"`
 	Continuous ElementStats `json:"Continuous read"`
 	Split      ElementStats `json:"Split reads"`
 }
 
-func (s *ReadStats) Update(other Stats) {
-	if other, ok := other.(*ReadStats); ok {
+func (s *CoverageStats) Update(other Stats) {
+	if other, ok := other.(*CoverageStats); ok {
 		s.Continuous.Update(other.Continuous)
 		s.Split.Update(other.Split)
 		s.UpdateTotal()
 	}
 }
 
-func (s *ReadStats) UpdateTotal() {
+func (s *CoverageStats) UpdateTotal() {
 	s.Total.ExonIntron = s.Continuous.ExonIntron + s.Split.ExonIntron
 	s.Total.Exon = s.Continuous.Exon + s.Split.Exon
 	s.Total.Intron = s.Continuous.Intron + s.Split.Intron
@@ -39,9 +38,9 @@ func (s *ReadStats) UpdateTotal() {
 	s.Total.Total = s.Continuous.Total + s.Split.Total
 }
 
-func (s *ReadStats) Merge(others chan Stats) {
+func (s *CoverageStats) Merge(others chan Stats) {
 	for other := range others {
-		if other, ok := other.(*ReadStats); ok {
+		if other, ok := other.(*CoverageStats); ok {
 			s.Update(other)
 		}
 	}
@@ -79,20 +78,22 @@ func updateCount(r *sam.Record, elems map[string]uint8, st *ElementStats) {
 	st.ExonIntron++
 }
 
-func (s *ReadStats) Collect(record *sam.Record, index *RtreeMap) {
-	if !isPrimary(record) || isUnmapped(record) {
+func (s *CoverageStats) Collect(record *sam.Record, index *RtreeMap) {
+	if index == nil || !isPrimary(record) || isUnmapped(record) {
 		return
 	}
 	elements := map[string]uint8{}
-	log.Debug(record.Name)
-	for _, mappingPosition := range getBlocks(record) {
-		log.Debug(mappingPosition)
-		results := QueryIndex(index.Get(mappingPosition.Chrom()), float64(mappingPosition.Start()), float64(mappingPosition.End()), math.MaxFloat64)
-		getElements(mappingPosition, &results, elements)
+	for _, mappingLocation := range getBlocks(record) {
+		results := QueryIndex(index.Get(mappingLocation.Chrom()), mappingLocation.Start(), mappingLocation.End(), math.MaxFloat64)
+		getElements(mappingLocation, &results, elements)
 	}
 	if isSplit(record) {
 		updateCount(record, elements, &s.Split)
 	} else {
 		updateCount(record, elements, &s.Continuous)
 	}
+}
+
+func NewCoverageStats() *CoverageStats {
+	return &CoverageStats{}
 }
