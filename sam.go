@@ -52,17 +52,17 @@ func getBlocks(r *sam.Record) []location {
 	for _, co := range r.Cigar {
 		coType := co.Type()
 		if coType == sam.CigarSkipped {
-			blocks = append(blocks, location{ref, start, end})
+			blocks = append(blocks, location{ref, float64(start), float64(end)})
 			start = end + co.Len()
 			end = start
 			continue
 		}
 		con = co.Type().Consumes()
 		end += co.Len() * con.Reference
-		// if con.Query != 0 {
-		// 	end = max(end, start)
-		// }
+		if con.Query != 0 {
+			end = max(end, start)
+		}
 	}
-	blocks = append(blocks, location{ref, start, end})
+	blocks = append(blocks, location{ref, float64(start), float64(end)})
 	return blocks
 }
