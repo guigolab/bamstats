@@ -4,12 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"math"
-	"os"
 	"sort"
-	"sync"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/biogo/hts/bam"
 	"github.com/biogo/hts/sam"
 )
 
@@ -43,18 +39,22 @@ type GeneralStats struct {
 	Pairs MappedPairsStats `json:"pairs,omitempty"`
 }
 
-func (s *GeneralStats) Merge(others chan GeneralStats) {
+func (s *GeneralStats) Merge(others chan Stats) {
 	for other := range others {
-		s.Update(other)
+		if other, ok := other.(*GeneralStats); ok {
+			s.Update(other)
+		}
 	}
 }
 
-func (s *GeneralStats) Update(other GeneralStats) {
-	s.Reads.Update(other.Reads)
-	s.Pairs.Update(other.Pairs)
-	if len(s.Pairs.Mapped) > 0 {
-		s.Pairs.Total = s.Reads.Total / 2
-		s.Pairs.Unmapped = s.Pairs.Total - s.Pairs.Mapped.Total()
+func (s *GeneralStats) Update(other Stats) {
+	if other, ok := other.(*GeneralStats); ok {
+		s.Reads.Update(other.Reads)
+		s.Pairs.Update(other.Pairs)
+		if len(s.Pairs.Mapped) > 0 {
+			s.Pairs.Total = s.Reads.Total / 2
+			s.Pairs.Unmapped = s.Pairs.Total - s.Pairs.Mapped.Total()
+		}
 	}
 }
 
@@ -151,7 +151,7 @@ func (tm TagMap) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (s *GeneralStats) Collect(r *sam.Record) {
+func (s *GeneralStats) Collect(r *sam.Record, trees *RtreeMap) {
 	NH, hasNH := r.Tag([]byte("NH"))
 	if !hasNH {
 		NH, _ = sam.ParseAux([]byte("NH:i:0"))
@@ -178,78 +178,4 @@ func (s *GeneralStats) Collect(r *sam.Record) {
 			}
 		}
 	}
-}
-
-var wgg sync.WaitGroup
-
-func gworker(in chan *sam.Record, out chan GeneralStats) {
-	defer wgg.Done()
-	stats := NewGeneralStats()
-	for record := range in {
-		stats.Collect(record)
-	}
-	log.Debug("Worker DONE!")
-	out <- *stats
-}
-
-func cProc(br *bam.Reader, cpu int, maxBuf int, reads int) *GeneralStats {
-	input := make([]chan *sam.Record, cpu)
-	stats := make(chan GeneralStats, cpu)
-	for i := 0; i < cpu; i++ {
-		wgg.Add(1)
-		input[i] = make(chan *sam.Record, maxBuf)
-		go gworker(input[i], stats)
-	}
-	c := 0
-	for {
-		if reads > -1 && c == reads {
-			break
-		}
-		record, err := br.Read()
-		if err != nil {
-			break
-		}
-		input[c%cpu] <- record
-		c++
-	}
-	for i := 0; i < cpu; i++ {
-		close(input[i])
-	}
-	go func() {
-		wgg.Wait()
-		close(stats)
-	}()
-	st := <-stats
-	st.Merge(stats)
-	return &st
-}
-
-func lProc(br *bam.Reader) *GeneralStats {
-	st := NewGeneralStats()
-	for {
-		record, err := br.Read()
-		if err != nil {
-			break
-		}
-		st.Collect(record)
-	}
-	return st
-}
-
-func General(bamFile string, cpu int, maxBuf int, reads int) *GeneralStats {
-	f, err := os.Open(bamFile)
-	defer f.Close()
-	check(err)
-	br, err := bam.NewReader(f, cpu)
-	defer br.Close()
-	check(err)
-	switch {
-	case cpu <= 0:
-		log.Panic("Number of cpus must be a positive number")
-	case cpu == 1:
-		return lProc(br)
-	case cpu > 1:
-		return cProc(br, cpu, maxBuf, reads)
-	}
-	return nil
 }
