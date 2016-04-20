@@ -1,15 +1,19 @@
 package bamstats
 
 import (
+	"bufio"
+	"math"
+	"os"
+	"sync"
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/biogo/hts/bam"
 	"github.com/biogo/hts/sam"
 	"github.com/brentp/bix"
 	"github.com/brentp/irelate"
-  "github.com/brentp/irelate/parsers"
-  I "github.com/brentp/irelate/interfaces"
-	"os"
-  "sync"
+	I "github.com/brentp/irelate/interfaces"
+	"github.com/brentp/irelate/parsers"
 )
 
 var wg sync.WaitGroup
@@ -29,28 +33,28 @@ type ReadStats struct {
 }
 
 func (s *ReadStats) Update(other ReadStats) {
-  s.Continuous.Update(other.Continuous)
-  s.Split.Update(other.Split)
-  s.UpdateTotal(other)
+	s.Continuous.Update(other.Continuous)
+	s.Split.Update(other.Split)
+	s.UpdateTotal(other)
 }
 
 func (s *ReadStats) UpdateTotal(other ReadStats) {
-  s.Total.Update(other.Continuous)
-  s.Total.Update(other.Split)
+	s.Total.Update(other.Continuous)
+	s.Total.Update(other.Split)
 }
 
 func (s *ReadStats) Merge(others chan ReadStats) {
-  for other := range others {
-    s.Update(other)
-  }
+	for other := range others {
+		s.Update(other)
+	}
 }
 
 func (s *ElementStats) Update(other ElementStats) {
-  s.ExonIntron += other.ExonIntron
-  s.Exon += other.Exon
-  s.Intron += other.Intron
-  s.Intergenic += other.Intergenic
-  s.Total += other.Total
+	s.ExonIntron += other.ExonIntron
+	s.Exon += other.Exon
+	s.Intron += other.Intron
+	s.Intergenic += other.Intergenic
+	s.Total += other.Total
 }
 
 func updateCount(r *sam.Record, elems map[string]uint8, st *ElementStats) {
@@ -93,26 +97,26 @@ func updateCount1(r *parsers.Bam, elems map[string]uint8, st *ElementStats) {
 
 func worker1(b I.RelatableIterator, anno I.Queryable, out chan ReadStats) {
 	// defer wg.Done()
-  stats := ReadStats{}
+	stats := ReadStats{}
 	for record := range irelate.PIRelate(80000, 25000, b, false, func(a I.Relatable) {}, anno) {
 		elements := map[string]uint8{}
-    if record, ok := record.(*parsers.Bam); ok {
+		if record, ok := record.(*parsers.Bam); ok {
 			getElements1(record, record.Related(), elements)
 			if isSplit1(record) {
 				updateCount1(record, elements, &stats.Split)
 			} else {
 				updateCount1(record, elements, &stats.Continuous)
 			}
-    }
+		}
 	}
 	out <- stats
 }
 
 func worker(in chan *sam.Record, out chan ReadStats, anno *bix.Bix) {
-  defer wg.Done()
-  stats := ReadStats{}
-  for record := range in {
-    elements := map[string]uint8{}
+	defer wg.Done()
+	stats := ReadStats{}
+	for record := range in {
+		elements := map[string]uint8{}
 		log.Debug(record.Name)
 		for _, mappingPosition := range getBlocks(record) {
 			log.Debug(mappingPosition)
@@ -126,7 +130,27 @@ func worker(in chan *sam.Record, out chan ReadStats, anno *bix.Bix) {
 			updateCount(record, elements, &stats.Continuous)
 		}
 	}
-  out <- stats
+	out <- stats
+}
+
+func worker2(in chan *sam.Record, out chan ReadStats, trees *RtreeMap) {
+	defer wg.Done()
+	stats := ReadStats{}
+	for record := range in {
+		elements := map[string]uint8{}
+		log.Debug(record.Name)
+		for _, mappingPosition := range getBlocks(record) {
+			log.Debug(mappingPosition)
+			results := QueryIndex(trees.Get(mappingPosition.Chrom()), float64(mappingPosition.Start()), float64(mappingPosition.End()), math.MaxFloat64)
+			getElements2(mappingPosition, &results, elements)
+		}
+		if isSplit(record) {
+			updateCount(record, elements, &stats.Split)
+		} else {
+			updateCount(record, elements, &stats.Continuous)
+		}
+	}
+	out <- stats
 }
 
 func Coverage1(bamFile string, annotation string, cpu int) ReadStats {
@@ -141,18 +165,67 @@ func Coverage1(bamFile string, annotation string, cpu int) ReadStats {
 	b, err := parsers.NewBamQueryable(bamFile)
 	defer b.Close()
 	check(err)
-  anno, err := bix.New(annotation)
+	anno, err := bix.New(annotation)
 	defer anno.Close()
 	check(err)
 	stats := make(chan ReadStats, cpu)
 
-	q, err := b.Query(location{"chr1",0,12000})
+	q, err := b.Query(location{"chr1", 0, 12000})
 	check(err)
 	worker1(q, anno, stats)
 	close(stats)
-  st := ReadStats{}
-  st.Merge(stats)
-  return st
+	st := ReadStats{}
+	st.Merge(stats)
+	return st
+}
+
+func Coverage2(bamFile string, annotation string, cpu int) ReadStats {
+	f, err := os.Open(bamFile)
+	defer f.Close()
+	check(err)
+	anno, err := os.Open(annotation)
+	defer anno.Close()
+	check(err)
+	start := time.Now()
+	log.Info("Creating index for ", annotation)
+	trees := CreateIndex(bufio.NewScanner(anno))
+	elapsed := time.Since(start)
+	log.Infof("Indexing done in %v", elapsed)
+	start = time.Now()
+	br, err := bam.NewReader(f, cpu)
+	defer br.Close()
+	check(err)
+	input := make([]chan *sam.Record, cpu)
+	stats := make(chan ReadStats, cpu)
+	for i := 0; i < cpu; i++ {
+		wg.Add(1)
+		input[i] = make(chan *sam.Record, 1000000)
+		go worker2(input[i], stats, trees)
+	}
+	c := 0
+	for {
+		record, err := br.Read()
+		if err != nil {
+			break
+		}
+		if !isPrimary(record) || isUnmapped(record) {
+			continue
+		}
+		input[c%cpu] <- record
+		c++
+	}
+	for i := 0; i < cpu; i++ {
+		close(input[i])
+	}
+	go func() {
+		wg.Wait()
+		close(stats)
+	}()
+	st := ReadStats{}
+	st.Merge(stats)
+	elapsed = time.Since(start)
+	log.Infof("Stats done in %v", elapsed)
+	return st
 }
 
 func Coverage(bamFile string, annotation string, cpu int) ReadStats {
@@ -165,31 +238,31 @@ func Coverage(bamFile string, annotation string, cpu int) ReadStats {
 	br, err := bam.NewReader(f, cpu)
 	defer br.Close()
 	check(err)
-  input := make([]chan *sam.Record, cpu)
-  stats := make(chan ReadStats, cpu)
-  for i := 0; i < cpu; i++ {
-    wg.Add(1)
-    input[i] = make(chan *sam.Record)
-    go worker(input[i], stats, anno)
-  }
-  c := 0
+	input := make([]chan *sam.Record, cpu)
+	stats := make(chan ReadStats, cpu)
+	for i := 0; i < cpu; i++ {
+		wg.Add(1)
+		input[i] = make(chan *sam.Record)
+		go worker(input[i], stats, anno)
+	}
+	c := 0
 	for {
-    record, err := br.Read()
+		record, err := br.Read()
 		if err != nil {
 			break
 		}
 		if !isPrimary(record) {
 			continue
 		}
-    input[c] <- record
-    c = (c+1)%cpu
-  }
-  for i := 0; i < cpu; i++ {
-    close(input[i])
-  }
-  wg.Wait()
-  close(stats)
-  st := ReadStats{}
-  st.Merge(stats)
-  return st
+		input[c] <- record
+		c = (c + 1) % cpu
+	}
+	for i := 0; i < cpu; i++ {
+		close(input[i])
+	}
+	wg.Wait()
+	close(stats)
+	st := ReadStats{}
+	st.Merge(stats)
+	return st
 }
