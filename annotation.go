@@ -42,7 +42,12 @@ func (t RtreeMap) Get(chr string) *rtreego.Rtree {
 	return t[chr]
 }
 
-func CreateIndex(reader *bufio.Scanner) *RtreeMap {
+func CreateIndex(fname string) *RtreeMap {
+
+	f, err := os.Open(fname)
+	defer f.Close()
+	check(err)
+	reader := bufio.NewScanner(f)
 
 	trees := make(RtreeMap)
 
@@ -93,7 +98,7 @@ func ReadIndex(fname string) {
 }
 
 func WriteIndex(fname string) {
-	trees := CreateIndex(bufio.NewScanner(os.Stdin))
+	trees := CreateIndex(fname)
 
 	// writing
 	f, err := os.Create(fname)
