@@ -1,20 +1,8 @@
 package bamstats
 
-import (
-	"github.com/biogo/hts/sam"
-	"github.com/brentp/irelate/parsers"
-)
+import "github.com/biogo/hts/sam"
 
 func isSplit(r *sam.Record) bool {
-	for _, op := range r.Cigar {
-		if op.Type() == sam.CigarSkipped {
-			return true
-		}
-	}
-	return false
-}
-
-func isSplit1(r *parsers.Bam) bool {
 	for _, op := range r.Cigar {
 		if op.Type() == sam.CigarSkipped {
 			return true
