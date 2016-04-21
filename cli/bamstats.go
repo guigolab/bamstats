@@ -26,6 +26,7 @@ func run(c *cli.Context) {
 	if bam == "" {
 		log.Fatal("no file specified")
 	}
+	log.Infof("Running %s version %s", c.App.Name, c.App.Version)
 	stats := bamstats.Process(bam, annotation, cpu, maxBuf, reads)
 	out := bamstats.NewOutput(output)
 	bamstats.OutputJson(out, stats)
