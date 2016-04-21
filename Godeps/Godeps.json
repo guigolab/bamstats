@@ -1,0 +1,35 @@
+{
+	"ImportPath": "github.com/bamstats",
+	"GoVersion": "go1.6",
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.8.7-49-gcdaedc6",
+			"Rev": "cdaedc68f2894175ac2b3221869685602c759e71"
+		},
+		{
+			"ImportPath": "github.com/biogo/hts/bam",
+			"Rev": "f35374716638c3b931057e5d2065cf8d171fb9fc"
+		},
+		{
+			"ImportPath": "github.com/biogo/hts/bgzf",
+			"Rev": "f35374716638c3b931057e5d2065cf8d171fb9fc"
+		},
+		{
+			"ImportPath": "github.com/biogo/hts/internal",
+			"Rev": "f35374716638c3b931057e5d2065cf8d171fb9fc"
+		},
+		{
+			"ImportPath": "github.com/biogo/hts/sam",
+			"Rev": "f35374716638c3b931057e5d2065cf8d171fb9fc"
+		},
+		{
+			"ImportPath": "github.com/dhconnelly/rtreego",
+			"Rev": "ddfb5d7b877e08f266b663ffc387fb671f615e8d"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "50c6bc5e4292a1d4e65c6e9be5f53be28bcbe28e"
+		}
+	]
+}
