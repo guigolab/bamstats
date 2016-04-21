@@ -4,10 +4,10 @@ CMD=bamstats
 
 build: cli/$(CMD) cli/$(CMD)-linux
 
-cli/$(CMD): cli/bamstats.go *.go
+cli/$(CMD): cli/bamstats.go *.go GoDeps/GoDeps.json
 	@cd cli && go build -o $(CMD)
 
-cli/$(CMD)-linux: cli/bamstats.go *.go
+cli/$(CMD)-linux: cli/bamstats.go *.go GoDeps/GoDeps.json
 	@cd cli && GOOS=linux go build -o $(CMD)-linux
 
 bench:
