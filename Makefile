@@ -1,12 +1,14 @@
 .PHONY: build bench profile deploy clean deepclean
 
-build: main/bamstats main/bamstats-linux
+CMD=bamstats
 
-main/bamstats: main/main.go *.go
-	@cd main && go build -o bamstats
+build: cli/$(CMD) cli/$(CMD)-linux
 
-main/bamstats-linux: main/main.go *.go
-	@cd main && GOOS=linux go build -o bamstats-linux
+cli/$(CMD): cli/bamstats.go *.go
+	@cd cli && go build -o $(CMD)
+
+cli/$(CMD)-linux: cli/bamstats.go *.go
+	@cd cli && GOOS=linux go build -o $(CMD)-linux
 
 bench:
 	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof
@@ -15,10 +17,10 @@ profile: cpu.prof
 	@go tool pprof bamstats.test cpu.prof
 
 deploy: build
-	@scp main/bamstats-linux ant:~/bin
+	@scp cli/$(CMD)-linux ant:~/bin/$(CMD)
 
 clean:
-	@rm main/bamstats*
+	@rm cli/$(CMD) cli/$(CMD)-linux
 
 deepclean: clean
 	@rm bamstats.test cpu.prof
