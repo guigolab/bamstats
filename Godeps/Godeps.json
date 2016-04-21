@@ -1,6 +1,9 @@
 {
 	"ImportPath": "github.com/bamstats",
 	"GoVersion": "go1.6",
+	"Packages": [
+		"./cli/"
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
@@ -22,6 +25,11 @@
 		{
 			"ImportPath": "github.com/biogo/hts/sam",
 			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-179-g0302d39",
+			"Rev": "0302d3914d2a6ad61404584cdae6e6dbc9c03599"
 		},
 		{
 			"ImportPath": "github.com/dhconnelly/rtreego",
