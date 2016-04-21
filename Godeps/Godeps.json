@@ -9,19 +9,19 @@
 		},
 		{
 			"ImportPath": "github.com/biogo/hts/bam",
-			"Rev": "f35374716638c3b931057e5d2065cf8d171fb9fc"
+			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
 		},
 		{
 			"ImportPath": "github.com/biogo/hts/bgzf",
-			"Rev": "f35374716638c3b931057e5d2065cf8d171fb9fc"
+			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
 		},
 		{
 			"ImportPath": "github.com/biogo/hts/internal",
-			"Rev": "f35374716638c3b931057e5d2065cf8d171fb9fc"
+			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
 		},
 		{
 			"ImportPath": "github.com/biogo/hts/sam",
-			"Rev": "f35374716638c3b931057e5d2065cf8d171fb9fc"
+			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
 		},
 		{
 			"ImportPath": "github.com/dhconnelly/rtreego",
