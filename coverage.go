@@ -16,9 +16,9 @@ type ElementStats struct {
 }
 
 type CoverageStats struct {
-	Total      ElementStats `json:"Total reads"`
-	Continuous ElementStats `json:"Continuous read"`
-	Split      ElementStats `json:"Split reads"`
+	Total      ElementStats `json:"total"`
+	Continuous ElementStats `json:"continuous"`
+	Split      ElementStats `json:"split"`
 }
 
 func (s *CoverageStats) Update(other Stats) {
