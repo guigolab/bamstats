@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/bamstats"
 	"github.com/spf13/cobra"
@@ -15,9 +13,7 @@ var (
 
 func run(cmd *cobra.Command, args []string) (err error) {
 	err = nil
-
-	if version, e := cmd.Flags().GetBool("version"); e == nil && version {
-		fmt.Printf("bamstats version %s\n", bamstats.Version())
+	if hasVersionFlag(cmd) {
 		return
 	}
 
@@ -55,7 +51,8 @@ func setBamstatsFlags(c *cobra.Command) {
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "bamstats",
-		Short: "Compute mapping statistics",
+		Short: "Mapping statistics",
+		Long:  "bamstats - compute mapping statistics",
 		RunE:  run,
 	}
 
