@@ -32,7 +32,7 @@ func run(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	out := bamstats.NewOutput(output)
-	bamstats.OutputJson(out, stats)
+	bamstats.OutputJSON(out, stats)
 
 	return
 }

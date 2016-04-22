@@ -97,19 +97,19 @@ func (s *MappedReadsStats) Unique() int {
 	return s.Mapped[1]
 }
 
-func (s TagMap) Update(other TagMap) {
-	for k := range s {
-		s[k] += other[k]
+func (tm TagMap) Update(other TagMap) {
+	for k := range tm {
+		tm[k] += other[k]
 	}
 	for k := range other {
-		if _, ok := s[k]; !ok {
-			s[k] += other[k]
+		if _, ok := tm[k]; !ok {
+			tm[k] += other[k]
 		}
 	}
 }
 
-func (s TagMap) Total() (sum int) {
-	for _, v := range s {
+func (tm TagMap) Total() (sum int) {
+	for _, v := range tm {
 		sum += v
 	}
 	return
@@ -165,21 +165,20 @@ func (s *GeneralStats) Collect(r *sam.Record, index *RtreeMap) {
 		s.Reads.Total++
 		s.Reads.Unmapped++
 		return
-	} else {
-		s.Reads.Mappings.Count++
-		if isPrimary(r) {
-			s.Reads.Total++
-			s.Reads.Mapped[NHKey]++
-			if isSplit(r) {
-				s.Reads.Split++
-			} else {
-				s.Reads.Continuous++
-			}
-			if isFirstOfValidPair(r) {
-				s.Pairs.Mapped[NHKey]++
-				isLen := int(math.Abs(float64(r.TempLen)))
-				s.Pairs.InsertSizes[isLen]++
-			}
+	}
+	s.Reads.Mappings.Count++
+	if isPrimary(r) {
+		s.Reads.Total++
+		s.Reads.Mapped[NHKey]++
+		if isSplit(r) {
+			s.Reads.Split++
+		} else {
+			s.Reads.Continuous++
+		}
+		if isFirstOfValidPair(r) {
+			s.Pairs.Mapped[NHKey]++
+			isLen := int(math.Abs(float64(r.TempLen)))
+			s.Pairs.InsertSizes[isLen]++
 		}
 	}
 }

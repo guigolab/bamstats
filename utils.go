@@ -29,7 +29,7 @@ func min(a, b int) int {
 	return b
 }
 
-func OutputJson(writer io.Writer, stats interface{}) {
+func OutputJSON(writer io.Writer, stats interface{}) {
 	b, err := json.MarshalIndent(stats, "", "\t")
 	check(err)
 	writer.Write(b)

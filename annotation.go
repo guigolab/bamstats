@@ -11,6 +11,7 @@ import (
 	"github.com/dhconnelly/rtreego"
 )
 
+// RtreeMap is a map of pointers to Rtree with string keys
 type RtreeMap map[string]*rtreego.Rtree
 
 type Feature struct {
@@ -31,8 +32,8 @@ func (f *Feature) End() float64 {
 	return f.location.LengthsCoord(0) + f.Start()
 }
 
-func (s *Feature) Bounds() *rtreego.Rect {
-	return s.location
+func (f *Feature) Bounds() *rtreego.Rect {
+	return f.location
 }
 
 func (t RtreeMap) Get(chr string) *rtreego.Rtree {
