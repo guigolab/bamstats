@@ -1,90 +1,67 @@
 package main
 
 import (
-	"os"
+	"fmt"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bamstats"
-	"github.com/codegangsta/cli"
+	"github.com/spf13/cobra"
 )
-
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 var (
 	bam, annotation, loglevel, output string
 	cpu, maxBuf, reads                int
 )
 
-func run(c *cli.Context) {
-	level, err := log.ParseLevel(loglevel)
-	check(err)
-	log.SetLevel(level)
-	if bam == "" {
-		log.Fatal("no file specified")
+func run(cmd *cobra.Command, args []string) (err error) {
+	err = nil
+
+	if version, e := cmd.Flags().GetBool("version"); e == nil && version {
+		fmt.Printf("bamstats version %s\n", bamstats.Version())
+		return
 	}
-	log.Infof("Running %s version %s", c.App.Name, c.App.Version)
-	stats := bamstats.Process(bam, annotation, cpu, maxBuf, reads)
+
+	// Set loglevel
+	level, err := log.ParseLevel(loglevel)
+	if err != nil {
+		return
+	}
+	log.SetLevel(level)
+
+	// Get stats
+	log.Infof("Running %s", cmd.Use)
+	stats, err := bamstats.Process(bam, annotation, cpu, maxBuf, reads)
+	if err != nil {
+		return
+	}
+
 	out := bamstats.NewOutput(output)
 	bamstats.OutputJson(out, stats)
+
+	return
+}
+
+func setBamstatsFlags(c *cobra.Command) {
+	c.PersistentFlags().StringVarP(&bam, "bam", "b", "", "input file")
+	c.PersistentFlags().StringVarP(&annotation, "annotaion", "a", "", "element annotation file")
+	c.PersistentFlags().StringVarP(&loglevel, "loglevel", "", "warn", "logging level")
+	c.PersistentFlags().StringVarP(&output, "output", "o", "-", "output file")
+	c.PersistentFlags().IntVarP(&cpu, "cpu", "c", 1, "number of cpus to be used")
+	c.PersistentFlags().IntVarP(&maxBuf, "max-buf", "", 1000000, "maximum number of buffered records")
+	c.PersistentFlags().IntVarP(&reads, "reads", "n", -1, "number of records to process")
+	c.PersistentFlags().Bool("version", false, "show version and exit")
 }
 
 func main() {
-	app := cli.NewApp()
-	app.Name = "bamstats"
-	app.Usage = "Compute mapping statistics"
-	app.Version = bamstats.Version
-	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:        "bam, b",
-			Value:       "",
-			Usage:       "input file",
-			Destination: &bam,
-		},
-		cli.StringFlag{
-			Name:        "annotation, a",
-			Value:       "",
-			Usage:       "bgzip compressed and indexed annotation file",
-			Destination: &annotation,
-		},
-		cli.StringFlag{
-			Name:        "loglevel",
-			Value:       "warn",
-			Usage:       "logging level",
-			Destination: &loglevel,
-		},
-		cli.IntFlag{
-			Name:        "cpu, c",
-			Value:       1,
-			Usage:       "number of cpus to be used",
-			Destination: &cpu,
-		},
-		cli.IntFlag{
-			Name:        "max-buf",
-			Value:       1000000,
-			Usage:       "maximum number of buffered records",
-			Destination: &maxBuf,
-		},
-		cli.IntFlag{
-			Name:        "n",
-			Value:       -1,
-			Usage:       "number of records to process",
-			Destination: &reads,
-		},
-		cli.StringFlag{
-			Name:        "o",
-			Value:       "-",
-			Usage:       "output file",
-			Destination: &output,
-		},
+	var rootCmd = &cobra.Command{
+		Use:   "bamstats",
+		Short: "Compute mapping statistics",
+		RunE:  run,
 	}
-	app.Action = run
 
-	if len(os.Args) == 1 {
-		os.Args = append(os.Args, "help")
+	setBamstatsFlags(rootCmd)
+
+	if err := rootCmd.Execute(); err != nil {
+		log.Debug(err)
 	}
-	app.Run(os.Args)
 }

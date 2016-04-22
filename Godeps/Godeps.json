@@ -27,13 +27,20 @@
 			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
 		},
 		{
-			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-179-g0302d39",
-			"Rev": "0302d3914d2a6ad61404584cdae6e6dbc9c03599"
-		},
-		{
 			"ImportPath": "github.com/dhconnelly/rtreego",
 			"Rev": "ddfb5d7b877e08f266b663ffc387fb671f615e8d"
+		},
+		{
+			"ImportPath": "github.com/inconshreveable/mousetrap",
+			"Rev": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+		},
+		{
+			"ImportPath": "github.com/spf13/cobra",
+			"Rev": "4c05eb1145f16d0e6bb4a3e1b6d769f4713cb41f"
+		},
+		{
+			"ImportPath": "github.com/spf13/pflag",
+			"Rev": "8f6a28b0916586e7f22fe931ae2fcfc380b1c0e6"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
