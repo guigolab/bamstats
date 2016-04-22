@@ -1,6 +1,7 @@
 package bamstats
 
 import (
+	"errors"
 	"os"
 	"sync"
 	"time"
@@ -43,13 +44,17 @@ func worker(in chan *sam.Record, out chan Stats, index *RtreeMap) {
 	out <- getStats(stats)
 }
 
-func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) chan Stats {
+func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (chan Stats, error) {
 	f, err := os.Open(bamFile)
 	defer f.Close()
-	check(err)
+	if err != nil {
+		return nil, err
+	}
 	br, err := bam.NewReader(f, cpu)
 	defer br.Close()
-	check(err)
+	if err != nil {
+		return nil, err
+	}
 	input := make([]chan *sam.Record, cpu)
 	stats := make(chan Stats, cpu)
 	for i := 0; i < cpu; i++ {
@@ -72,11 +77,14 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) ch
 	for i := 0; i < cpu; i++ {
 		close(input[i])
 	}
-	return stats
+	return stats, nil
 }
 
-func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) *Stats {
+func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) (*Stats, error) {
 	var index *RtreeMap
+	if bamFile == "" {
+		return nil, errors.New("Please specify a BAM input file")
+	}
 	if annotation != "" {
 		log.Infof("Creating index for %s", annotation)
 		start := time.Now()
@@ -85,7 +93,10 @@ func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) 
 	}
 	start := time.Now()
 	log.Infof("Collecting stats for %s", bamFile)
-	stats := readBAM(bamFile, index, cpu, maxBuf, reads)
+	stats, err := readBAM(bamFile, index, cpu, maxBuf, reads)
+	if err != nil {
+		return nil, err
+	}
 	go func() {
 		wg.Wait()
 		close(stats)
@@ -93,5 +104,5 @@ func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) 
 	log.Infof("Stats done in %v", time.Since(start))
 	st := <-stats
 	st.Merge(stats)
-	return &st
+	return &st, nil
 }
