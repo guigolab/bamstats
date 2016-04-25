@@ -12,6 +12,10 @@ import (
 	"github.com/biogo/hts/sam"
 )
 
+func init() {
+	log.SetLevel(log.WarnLevel)
+}
+
 // Stats represents mapping statistics.
 type Stats interface {
 	Update(other Stats)
