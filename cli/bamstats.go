@@ -38,7 +38,7 @@ func run(cmd *cobra.Command, args []string) (err error) {
 }
 
 func setBamstatsFlags(c *cobra.Command) {
-	c.PersistentFlags().StringVarP(&bam, "bam", "b", "", "input file")
+	c.PersistentFlags().StringVarP(&bam, "input", "i", "", "input file")
 	c.PersistentFlags().StringVarP(&annotation, "annotaion", "a", "", "element annotation file")
 	c.PersistentFlags().StringVarP(&loglevel, "loglevel", "", "warn", "logging level")
 	c.PersistentFlags().StringVarP(&output, "output", "o", "-", "output file")
