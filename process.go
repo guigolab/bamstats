@@ -23,6 +23,7 @@ var wg sync.WaitGroup
 
 func getStats(stats []Stats) Stats {
 	general := stats[0].(*GeneralStats)
+	general.Reads.UpdateMappingsRatio()
 	general.Coverage = nil
 	if len(stats) > 1 {
 		general.Coverage = stats[1].(*CoverageStats)
