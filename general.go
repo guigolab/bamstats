@@ -22,9 +22,7 @@ type MappedReadsStats struct {
 // MappingsStats represents statistics for mappings
 type MappingsStats struct {
 	MappedReadsStats
-	Continuous int           `json:"continuous"`
-	Split      int           `json:"split"`
-	Mappings   MultimapStats `json:"mappings"`
+	Mappings MultimapStats `json:"mappings"`
 }
 
 // MappedPairsStats represents statistcs for mapped read-pairs
@@ -80,8 +78,6 @@ func (s *MappedReadsStats) Update(other MappedReadsStats) {
 // Update updates all counts from another MappingsStats instance.
 func (s *MappingsStats) Update(other MappingsStats) {
 	s.MappedReadsStats.Update(other.MappedReadsStats)
-	s.Continuous += other.Continuous
-	s.Split += other.Split
 	s.Mappings.Count += other.Mappings.Count
 	s.UpdateMappingsRatio()
 }
@@ -191,11 +187,6 @@ func (s *GeneralStats) Collect(r *sam.Record, index *RtreeMap) {
 	if isPrimary(r) {
 		s.Reads.Total++
 		s.Reads.Mapped[NHKey]++
-		if isSplit(r) {
-			s.Reads.Split++
-		} else {
-			s.Reads.Continuous++
-		}
 		if isFirstOfValidPair(r) {
 			s.Pairs.Mapped[NHKey]++
 			isLen := int(math.Abs(float64(r.TempLen)))
