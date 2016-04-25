@@ -4,7 +4,7 @@ import "fmt"
 
 const (
 	VersionNumber      = 0.1
-	MinorVersionNumber = 0
+	MinorVersionNumber = 1
 )
 
 func Version() string {

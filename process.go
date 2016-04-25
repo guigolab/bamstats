@@ -24,6 +24,7 @@ func getStats(stats []Stats) Stats {
 	general.Coverage = nil
 	if len(stats) > 1 {
 		general.Coverage = stats[1].(*CoverageStats)
+		general.Coverage.UpdateTotal()
 	}
 	return general
 }
