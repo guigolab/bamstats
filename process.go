@@ -1,3 +1,4 @@
+// Package bamstats provides functions for computing several mapping statistics on a BAM file.
 package bamstats
 
 import (
