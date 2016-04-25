@@ -1,11 +1,8 @@
 package bamstats
 
-import (
-	"math"
+import "github.com/biogo/hts/sam"
 
-	"github.com/biogo/hts/sam"
-)
-
+// ElementStats represents mappings statistics for genomic elements
 type ElementStats struct {
 	ExonIntron int `json:"exonic_intronic"`
 	Intron     int `json:"intron"`
@@ -15,12 +12,14 @@ type ElementStats struct {
 	Total      int `json:"total"`
 }
 
+// CoverageStats represents genome coverage statistics for continuos, split and total mapped reads.
 type CoverageStats struct {
 	Total      ElementStats `json:"total"`
 	Continuous ElementStats `json:"continuous"`
 	Split      ElementStats `json:"split"`
 }
 
+// Update updates all counts from a Stats instance.
 func (s *CoverageStats) Update(other Stats) {
 	if other, ok := other.(*CoverageStats); ok {
 		s.Continuous.Update(other.Continuous)
@@ -29,6 +28,7 @@ func (s *CoverageStats) Update(other Stats) {
 	}
 }
 
+// UpdateTotal updates the aggregated count from continuous and split mapped reads.
 func (s *CoverageStats) UpdateTotal() {
 	s.Total.ExonIntron = s.Continuous.ExonIntron + s.Split.ExonIntron
 	s.Total.Exon = s.Continuous.Exon + s.Split.Exon
@@ -38,6 +38,7 @@ func (s *CoverageStats) UpdateTotal() {
 	s.Total.Total = s.Continuous.Total + s.Split.Total
 }
 
+// Merge update counts from a channel of Stats instances.
 func (s *CoverageStats) Merge(others chan Stats) {
 	for other := range others {
 		if other, ok := other.(*CoverageStats); ok {
@@ -46,6 +47,7 @@ func (s *CoverageStats) Merge(others chan Stats) {
 	}
 }
 
+// Update updates all counts from another ElementsStats instance.
 func (s *ElementStats) Update(other ElementStats) {
 	s.ExonIntron += other.ExonIntron
 	s.Exon += other.Exon
@@ -78,13 +80,14 @@ func updateCount(r *sam.Record, elems map[string]uint8, st *ElementStats) {
 	st.ExonIntron++
 }
 
+// Collect collects genome coverage statistics from a sam.Record.
 func (s *CoverageStats) Collect(record *sam.Record, index *RtreeMap) {
 	if index == nil || !isPrimary(record) || isUnmapped(record) {
 		return
 	}
 	elements := map[string]uint8{}
 	for _, mappingLocation := range getBlocks(record) {
-		results := QueryIndex(index.Get(mappingLocation.Chrom()), mappingLocation.Start(), mappingLocation.End(), math.MaxFloat64)
+		results := QueryIndex(index.Get(mappingLocation.Chrom()), mappingLocation.Start(), mappingLocation.End())
 		getElements(mappingLocation, &results, elements)
 	}
 	if isSplit(record) {
@@ -94,6 +97,7 @@ func (s *CoverageStats) Collect(record *sam.Record, index *RtreeMap) {
 	}
 }
 
+// NewCoverageStats create a new instance of CoverageStats.
 func NewCoverageStats() *CoverageStats {
 	return &CoverageStats{}
 }

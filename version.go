@@ -2,13 +2,16 @@ package bamstats
 
 import "fmt"
 
+// Constants for Major and Minor version numbers.
 const (
 	VersionNumber      = 0.1
 	MinorVersionNumber = 1
 )
 
+// PreVersionString indicates wheather the program is a pre-release.
 var PreVersionString = "-dev"
 
+// Version returns the current version string.
 func Version() string {
 	return getVersion(VersionNumber, MinorVersionNumber, PreVersionString)
 }

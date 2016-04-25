@@ -11,6 +11,7 @@ import (
 	"github.com/biogo/hts/sam"
 )
 
+// Stats represents mapping statistics.
 type Stats interface {
 	Update(other Stats)
 	Merge(others chan Stats)
@@ -81,6 +82,7 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (c
 	return stats, nil
 }
 
+// Process process the input BAM file and collect different mapping stats.
 func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) (*Stats, error) {
 	var index *RtreeMap
 	if bamFile == "" {

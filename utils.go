@@ -29,6 +29,7 @@ func min(a, b int) int {
 	return b
 }
 
+// OutputJSON writes the json representation of stats to an io.Writer
 func OutputJSON(writer io.Writer, stats interface{}) {
 	b, err := json.MarshalIndent(stats, "", "\t")
 	check(err)
@@ -38,6 +39,7 @@ func OutputJSON(writer io.Writer, stats interface{}) {
 	}
 }
 
+// NewOutput return a new io.Writer given an output file name. If the file name is '-' os.Stdout is returned.
 func NewOutput(output string) io.Writer {
 	switch output {
 	case "-":
