@@ -8,12 +8,6 @@ import (
 	"github.com/biogo/hts/sam"
 )
 
-func checkTest(err error, t *testing.T) {
-	if err != nil {
-		t.Error(err)
-	}
-}
-
 func sliceEq(a, b []location) bool {
 	if a == nil && b == nil {
 		return true
