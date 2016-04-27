@@ -2,9 +2,11 @@ package bamstats
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 
 	"github.com/biogo/hts/sam"
 )
@@ -156,12 +158,12 @@ func (tm TagMap) MarshalJSON() ([]byte, error) {
 	buf.Write([]byte{'{', '\n'})
 	var keys []int
 	for k := range tm {
-		keys = append(keys, int(k))
+		keys = append(keys, k)
 	}
 	sort.Ints(keys)
 	l := len(keys)
 	for i, k := range keys {
-		fmt.Fprintf(buf, "\t\"%d\": \"%v\"", k, tm[k])
+		fmt.Fprintf(buf, "\t\"%d\": %v", k, tm[k])
 		if i < l-1 {
 			buf.WriteByte(',')
 		}
@@ -169,6 +171,23 @@ func (tm TagMap) MarshalJSON() ([]byte, error) {
 	}
 	buf.Write([]byte{'}', '\n'})
 	return buf.Bytes(), nil
+}
+
+// UnmarshalJSON parse a JSON representation of a TagMap.
+func (tm TagMap) UnmarshalJSON(b []byte) (err error) {
+	// JSON objects have string key - need to convert to int
+	m := make(map[string]int)
+	if tm == nil {
+		tm = make(map[int]int)
+	}
+	if err = json.Unmarshal(b, &m); err == nil {
+		for key, value := range m {
+			if intKey, err := strconv.Atoi(key); err == nil {
+				tm[intKey] = value
+			}
+		}
+	}
+	return
 }
 
 // Collect collects general mapping statistics from a sam.Record.
