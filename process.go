@@ -89,7 +89,7 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (c
 }
 
 // Process process the input BAM file and collect different mapping stats.
-func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) (*Stats, error) {
+func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) (Stats, error) {
 	var index *RtreeMap
 	if bamFile == "" {
 		return nil, errors.New("Please specify a BAM input file")
@@ -113,5 +113,5 @@ func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) 
 	log.Infof("Stats done in %v", time.Since(start))
 	st := <-stats
 	st.Merge(stats)
-	return &st, nil
+	return st, nil
 }
