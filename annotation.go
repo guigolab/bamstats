@@ -57,8 +57,11 @@ func CreateIndex(fname string) *RtreeMap {
 	check(err)
 	reader := bufio.NewScanner(f)
 
-	trees := make(RtreeMap)
+	return createIndex(reader)
+}
 
+func createIndex(reader *bufio.Scanner) *RtreeMap {
+	trees := make(RtreeMap)
 	for reader.Scan() {
 		line := strings.Split(reader.Text(), "\t")
 		chr := line[0]
@@ -86,8 +89,9 @@ func CreateIndex(fname string) *RtreeMap {
 
 // QueryIndex perform a SearchIntersect on the specified index given a start and end position.
 func QueryIndex(index *rtreego.Rtree, begin, end float64) []rtreego.Spatial {
+	size := end - begin
 	// Create the bounding box for the query:
-	bb, _ := rtreego.NewRect(rtreego.Point{begin, begin}, []float64{end - begin, end - begin})
+	bb, _ := rtreego.NewRect(rtreego.Point{begin, begin}, []float64{size, size})
 
 	// Get a slice of the objects in rt that intersect bb:
 	return index.SearchIntersect(bb)
