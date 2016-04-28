@@ -228,3 +228,6 @@ An example of the output `JSON` file with all the statistics is shown below. The
 	}
 }
 ----
+
+== License
+This software is release under a BSD-style license that can be found in the `LICENSE` file.
