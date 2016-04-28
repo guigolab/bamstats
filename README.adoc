@@ -1,6 +1,6 @@
 = bamstats
 
-`Bamstats` is a command line tool written in `Go` to compute mapping statistics from a `BAM` file.
+`Bamstats` is a command line tool written in `Go` for computing mapping statistics from a `BAM` file.
 
 It currently supports the following statistics:
 
