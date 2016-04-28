@@ -174,18 +174,16 @@ func (tm TagMap) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON parse a JSON representation of a TagMap.
-func (tm TagMap) UnmarshalJSON(b []byte) (err error) {
-	// JSON objects have string key - need to convert to int
-	m := make(map[string]int)
-	if tm == nil {
-		tm = make(map[int]int)
-	}
-	if err = json.Unmarshal(b, &m); err == nil {
-		for key, value := range m {
+func (tm *TagMap) UnmarshalJSON(b []byte) (err error) {
+	smap, imap := make(map[string]int), TagMap{}
+	if err = json.Unmarshal(b, &smap); err == nil {
+		for key, value := range smap {
+			// JSON objects have string key - need to convert to int
 			if intKey, err := strconv.Atoi(key); err == nil {
-				tm[intKey] = value
+				imap[intKey] = value
 			}
 		}
+		*tm = imap
 	}
 	return
 }
