@@ -1,6 +1,6 @@
 = bamstats
 
-A command line tool to compute mapping statistics from a `BAM` file.
+`Bamstats` is a command line tool written in `Go` to compute mapping statistics from a `BAM` file.
 
 It currently supports the following statistics:
 
@@ -13,7 +13,7 @@ The general mapping statistics include:
 
 - Total number of reads
 - Number of unmapped reads
-- Map with number of mapped reads grouped by number of multimaps (`NH` tag in `BAM` file)
+- Number of mapped reads grouped by number of multimaps (`NH` tag in `BAM` file)
 - Number of mappings
 - Ratio of mappings vs mapped reads
 
