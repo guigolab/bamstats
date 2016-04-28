@@ -2,19 +2,34 @@
 
 CMD=bamstats
 LDFLAGS=
+OS=$(shell go env GOOS)
+ARCH=$(shell go env GOARCH)
 
-build: cli/$(CMD) cli/$(CMD)-linux
+build: bin/linux/386/$(CMD) \
+			 bin/linux/amd64/$(CMD) \
+			 bin/darwin/386/$(CMD) \
+			 bin/darwin/amd64/$(CMD) \
+			 bin/$(CMD)
 
-release: prepareRelease cli/$(CMD) cli/$(CMD)-linux
+release: prepareRelease build
 
 prepareRelease:
 	$(eval LDFLAGS=-ldflags "-X github.com/bamstats.PreVersionString=")
 
-cli/$(CMD): cli/*.go *.go GoDeps/GoDeps.json
-	@cd cli && go build $(LDFLAGS) -o $(CMD)
+bin/$(CMD): bin/$(OS)/$(ARCH)/$(CMD)
+	@ln -s $$PWD/bin/$(OS)/$(ARCH)/$(CMD) bin/$(CMD)
 
-cli/$(CMD)-linux: cli/*.go *.go GoDeps/GoDeps.json
-	@cd cli && GOOS=linux go build $(LDFLAGS) -o $(CMD)-linux
+bin/darwin/386/$(CMD): cli/*.go *.go GoDeps/GoDeps.json
+	@cd cli && GOARCH=386 GOOS=darwin go build $(LDFLAGS) -o ../"$@"
+
+bin/linux/386/$(CMD): cli/*.go *.go GoDeps/GoDeps.json
+	@cd cli && GOARCH=386 GOOS=linux go build $(LDFLAGS) -o ../"$@"
+
+bin/darwin/amd64/$(CMD): cli/*.go *.go GoDeps/GoDeps.json
+	@cd cli && GOARCH=amd64 GOOS=darwin go build $(LDFLAGS) -o ../"$@"
+
+bin/linux/amd64/$(CMD): cli/*.go *.go GoDeps/GoDeps.json
+	@cd cli && GOARCH=amd64 GOOS=linux go build $(LDFLAGS) -o ../"$@"
 
 bench:
 	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof
@@ -23,10 +38,10 @@ profile: cpu.prof
 	@go tool pprof bamstats.test cpu.prof
 
 deploy: build
-	@scp cli/$(CMD)-linux ant:~/bin/$(CMD)
+	@scp bin/linux/amd64/$(CMD) ant:~/bin/$(CMD)
 
 clean:
-	@rm -f cli/$(CMD) cli/$(CMD)-linux
+	@rm -rf bin/*
 
 deepclean: clean
 	@rm bamstats.test cpu.prof
