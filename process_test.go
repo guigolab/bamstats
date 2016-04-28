@@ -1,16 +1,77 @@
 package bamstats
 
 import (
+	"bytes"
+	"os"
 	"runtime"
 	"testing"
 )
 
+func checkTest(err error, t *testing.T) {
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 var (
-	bamFile        = "data/test1.bam"
-	annotationFile = "data/gencode.v22.annotation.201503031.chr1.bed"
-	maxBuf         = 1000000
-	reads          = -1
+	bamFile              = "data/process-test.bam"
+	expectedGeneralJSON  = "data/expected-general.json"
+	expectedCoverageJSON = "data/expected-coverage.json"
+	annotationFile       = "data/coverage-test.bed"
+	maxBuf               = 1000000
+	reads                = -1
 )
+
+func readExpected(path string, t *testing.T) []byte {
+	f, err := os.Open(path)
+	checkTest(err, t)
+	var b bytes.Buffer
+	_, err = b.ReadFrom(f)
+	checkTest(err, t)
+	return b.Bytes()
+}
+
+func TestGeneral(t *testing.T) {
+	var b bytes.Buffer
+	out, err := Process(bamFile, "", runtime.GOMAXPROCS(-1), maxBuf, reads)
+	checkTest(err, t)
+	l := len(out)
+	if l > 1 {
+		t.Errorf("(Process) Expected StatsMap of length 1, got %d", l)
+	}
+	_, ok := out["general"].(*GeneralStats)
+	if !ok {
+		t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
+	}
+	OutputJSON(&b, out)
+	stats := readExpected(expectedGeneralJSON, t)
+	if len(b.Bytes()) != len(stats) {
+		t.Error("(Proces) GeneralStats are different")
+	}
+}
+
+func TestCoverage(t *testing.T) {
+	var b bytes.Buffer
+	out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads)
+	checkTest(err, t)
+	l := len(out)
+	if l > 2 {
+		t.Errorf("(Process) Expected StatsMap of length 2, got %d", l)
+	}
+	_, ok := out["general"].(*GeneralStats)
+	if !ok {
+		t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
+	}
+	_, ok = out["coverage"].(*CoverageStats)
+	if !ok {
+		t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverage"])
+	}
+	OutputJSON(&b, out)
+	stats := readExpected(expectedCoverageJSON, t)
+	if len(b.Bytes()) != len(stats) {
+		t.Error("(Proces) CoverageStats are different")
+	}
+}
 
 func BenchmarkGeneral(b *testing.B) {
 	for i := 0; i < b.N; i++ {
