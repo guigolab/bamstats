@@ -1,6 +1,6 @@
 = bamstats
 
-A command line tool to compute mapping statistic on a `BAM` file.
+A command line tool to compute mapping statistics from a `BAM` file.
 
 It currently supports the following statistics:
 
