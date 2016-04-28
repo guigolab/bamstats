@@ -21,22 +21,40 @@ type Stats interface {
 	Update(other Stats)
 	Merge(others chan Stats)
 	Collect(record *sam.Record, index *RtreeMap)
+	Finalize()
 }
+
+// StatsMap is a map of Stats instances with string keys.
+type StatsMap map[string]Stats
 
 var wg sync.WaitGroup
 
-func getStats(stats []Stats) Stats {
-	general := stats[0].(*GeneralStats)
-	general.Reads.UpdateMappingsRatio()
-	general.Coverage = nil
-	if len(stats) > 1 {
-		general.Coverage = stats[1].(*CoverageStats)
-		general.Coverage.UpdateTotal()
+// Merge merges instances of StatsMap
+func (sm *StatsMap) Merge(stats chan StatsMap) {
+	for s := range stats {
+		for key, stat := range *sm {
+			if otherStat, ok := s[key]; ok {
+				stat.Update(otherStat)
+			}
+		}
 	}
-	return general
 }
 
-func worker(in chan *sam.Record, out chan Stats, index *RtreeMap) {
+func getStatsMap(stats []Stats) StatsMap {
+	m := make(StatsMap)
+	for _, s := range stats {
+		s.Finalize()
+		switch s.(type) {
+		case *GeneralStats:
+			m["general"] = s
+		case *CoverageStats:
+			m["coverage"] = s
+		}
+	}
+	return m
+}
+
+func worker(in chan *sam.Record, out chan StatsMap, index *RtreeMap) {
 	defer wg.Done()
 	stats := []Stats{NewGeneralStats()}
 	if index != nil {
@@ -49,10 +67,10 @@ func worker(in chan *sam.Record, out chan Stats, index *RtreeMap) {
 	}
 	log.Debug("Worker DONE!")
 
-	out <- getStats(stats)
+	out <- getStatsMap(stats)
 }
 
-func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (chan Stats, error) {
+func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (chan StatsMap, error) {
 	f, err := os.Open(bamFile)
 	defer f.Close()
 	if err != nil {
@@ -64,7 +82,7 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (c
 		return nil, err
 	}
 	input := make([]chan *sam.Record, cpu)
-	stats := make(chan Stats, cpu)
+	stats := make(chan StatsMap, cpu)
 	for i := 0; i < cpu; i++ {
 		wg.Add(1)
 		input[i] = make(chan *sam.Record, maxBuf)
@@ -89,7 +107,7 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (c
 }
 
 // Process process the input BAM file and collect different mapping stats.
-func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) (Stats, error) {
+func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) (StatsMap, error) {
 	var index *RtreeMap
 	if bamFile == "" {
 		return nil, errors.New("Please specify a BAM input file")

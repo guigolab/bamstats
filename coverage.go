@@ -24,18 +24,8 @@ func (s *CoverageStats) Update(other Stats) {
 	if other, ok := other.(*CoverageStats); ok {
 		s.Continuous.Update(other.Continuous)
 		s.Split.Update(other.Split)
-		s.UpdateTotal()
+		s.Finalize()
 	}
-}
-
-// UpdateTotal updates the aggregated count from continuous and split mapped reads.
-func (s *CoverageStats) UpdateTotal() {
-	s.Total.ExonIntron = s.Continuous.ExonIntron + s.Split.ExonIntron
-	s.Total.Exon = s.Continuous.Exon + s.Split.Exon
-	s.Total.Intron = s.Continuous.Intron + s.Split.Intron
-	s.Total.Intergenic = s.Continuous.Intergenic + s.Split.Intergenic
-	s.Total.Other = s.Continuous.Other + s.Split.Other
-	s.Total.Total = s.Continuous.Total + s.Split.Total
 }
 
 // Merge update counts from a channel of Stats instances.
@@ -45,6 +35,16 @@ func (s *CoverageStats) Merge(others chan Stats) {
 			s.Update(other)
 		}
 	}
+}
+
+// Finalize updates dependent counts of a CoverageStats instance.
+func (s *CoverageStats) Finalize() {
+	s.Total.ExonIntron = s.Continuous.ExonIntron + s.Split.ExonIntron
+	s.Total.Exon = s.Continuous.Exon + s.Split.Exon
+	s.Total.Intron = s.Continuous.Intron + s.Split.Intron
+	s.Total.Intergenic = s.Continuous.Intergenic + s.Split.Intergenic
+	s.Total.Other = s.Continuous.Other + s.Split.Other
+	s.Total.Total = s.Continuous.Total + s.Split.Total
 }
 
 // Update updates all counts from another ElementsStats instance.

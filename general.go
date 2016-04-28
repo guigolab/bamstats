@@ -41,9 +41,8 @@ type MultimapStats struct {
 
 // GeneralStats represents general mapping statistics
 type GeneralStats struct {
-	Reads    MappingsStats    `json:"reads,omitempty"`
-	Pairs    MappedPairsStats `json:"pairs,omitempty"`
-	Coverage *CoverageStats   `json:"coverage,omitempty"`
+	Reads MappingsStats    `json:"reads,omitempty"`
+	Pairs MappedPairsStats `json:"pairs,omitempty"`
 }
 
 // Merge updates counts from a channel of Stats instances.
@@ -60,14 +59,14 @@ func (s *GeneralStats) Update(other Stats) {
 	if other, ok := other.(*GeneralStats); ok {
 		s.Reads.Update(other.Reads)
 		s.Pairs.Update(other.Pairs)
-		if s.Coverage != nil {
-			s.Coverage.Update(other.Coverage)
-		}
-		if len(s.Pairs.Mapped) > 0 {
-			s.Pairs.Total = s.Reads.Total / 2
-			s.Pairs.Unmapped = s.Pairs.Total - s.Pairs.Mapped.Total()
-		}
+		s.Pairs.UpdateUnmapped()
 	}
+}
+
+// Finalize updates dependent counts of a Stats instance.
+func (s *GeneralStats) Finalize() {
+	s.Reads.UpdateMappingsRatio()
+	s.Pairs.UpdateUnmapped()
 }
 
 // Update updates all counts from another MappedReadStats instance.
@@ -97,6 +96,11 @@ func (s *MappedPairsStats) FilterInsertSizes(percent float64) {
 			delete(s.InsertSizes, k)
 		}
 	}
+}
+
+// UpdateUnmapped updates the count of unmapped pairs
+func (s *MappedPairsStats) UpdateUnmapped() {
+	s.Unmapped = s.Total - s.Mapped.Total()
 }
 
 // UpdateMappingsRatio updates ration of mappings vs total mapped reads.
@@ -205,6 +209,7 @@ func (s *GeneralStats) Collect(r *sam.Record, index *RtreeMap) {
 		s.Reads.Total++
 		s.Reads.Mapped[NHKey]++
 		if isFirstOfValidPair(r) {
+			s.Pairs.Total++
 			s.Pairs.Mapped[NHKey]++
 			isLen := int(math.Abs(float64(r.TempLen)))
 			s.Pairs.InsertSizes[isLen]++
