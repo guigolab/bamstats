@@ -5,9 +5,7 @@ LDFLAGS=
 OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
 
-build: bin/linux/386/$(CMD) \
-			 bin/linux/amd64/$(CMD) \
-			 bin/darwin/386/$(CMD) \
+build: bin/linux/amd64/$(CMD) \
 			 bin/darwin/amd64/$(CMD) \
 			 bin/$(CMD)
 
