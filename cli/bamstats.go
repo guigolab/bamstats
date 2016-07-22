@@ -9,6 +9,7 @@ import (
 var (
 	bam, annotation, loglevel, output string
 	cpu, maxBuf, reads                int
+	uniq                              bool
 )
 
 func run(cmd *cobra.Command, args []string) (err error) {
@@ -26,7 +27,7 @@ func run(cmd *cobra.Command, args []string) (err error) {
 
 	// Get stats
 	log.Infof("Running %s", cmd.Use)
-	stats, err := bamstats.Process(bam, annotation, cpu, maxBuf, reads)
+	stats, err := bamstats.Process(bam, annotation, cpu, maxBuf, reads, uniq)
 	if err != nil {
 		return
 	}
@@ -45,6 +46,7 @@ func setBamstatsFlags(c *cobra.Command) {
 	c.PersistentFlags().IntVarP(&cpu, "cpu", "c", 1, "number of cpus to be used")
 	c.PersistentFlags().IntVarP(&maxBuf, "max-buf", "", 1000000, "maximum number of buffered records")
 	c.PersistentFlags().IntVarP(&reads, "reads", "n", -1, "number of records to process")
+	c.PersistentFlags().BoolVarP(&uniq, "uniq", "u", false, "output genomic coverage statistics for uniqely mapped reads too")
 	c.PersistentFlags().Bool("version", false, "show version and exit")
 }
 

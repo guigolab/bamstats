@@ -48,17 +48,26 @@ func getStatsMap(stats []Stats) StatsMap {
 		case *GeneralStats:
 			m["general"] = s
 		case *CoverageStats:
-			m["coverage"] = s
+			if s.(*CoverageStats).uniq {
+				m["coverageUniq"] = s
+			} else {
+				m["coverage"] = s
+			}
 		}
 	}
 	return m
 }
 
-func worker(in chan *sam.Record, out chan StatsMap, index *RtreeMap) {
+func worker(in chan *sam.Record, out chan StatsMap, index *RtreeMap, uniq bool) {
 	defer wg.Done()
 	stats := []Stats{NewGeneralStats()}
 	if index != nil {
 		stats = append(stats, NewCoverageStats())
+		if uniq {
+			cs := NewCoverageStats()
+			cs.uniq = true
+			stats = append(stats, cs)
+		}
 	}
 	for record := range in {
 		for _, s := range stats {
@@ -70,7 +79,7 @@ func worker(in chan *sam.Record, out chan StatsMap, index *RtreeMap) {
 	out <- getStatsMap(stats)
 }
 
-func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (chan StatsMap, error) {
+func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (chan StatsMap, error) {
 	f, err := os.Open(bamFile)
 	defer f.Close()
 	if err != nil {
@@ -86,7 +95,7 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (c
 	for i := 0; i < cpu; i++ {
 		wg.Add(1)
 		input[i] = make(chan *sam.Record, maxBuf)
-		go worker(input[i], stats, index)
+		go worker(input[i], stats, index, uniq)
 	}
 	c := 0
 	for {
@@ -107,7 +116,7 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int) (c
 }
 
 // Process process the input BAM file and collect different mapping stats.
-func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) (StatsMap, error) {
+func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int, uniq bool) (StatsMap, error) {
 	var index *RtreeMap
 	if bamFile == "" {
 		return nil, errors.New("Please specify a BAM input file")
@@ -120,7 +129,7 @@ func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int) 
 	}
 	start := time.Now()
 	log.Infof("Collecting stats for %s", bamFile)
-	stats, err := readBAM(bamFile, index, cpu, maxBuf, reads)
+	stats, err := readBAM(bamFile, index, cpu, maxBuf, reads, uniq)
 	if err != nil {
 		return nil, err
 	}

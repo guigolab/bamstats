@@ -2,6 +2,15 @@ package bamstats
 
 import "github.com/biogo/hts/sam"
 
+func isUniq(r *sam.Record) bool {
+	NH, hasNH := r.Tag([]byte("NH"))
+	if !hasNH {
+		return false
+	}
+	NHval := NH.Value().(uint8)
+	return NHval == 1
+}
+
 func isSplit(r *sam.Record) bool {
 	for _, op := range r.Cigar {
 		if op.Type() == sam.CigarSkipped {

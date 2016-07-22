@@ -31,6 +31,8 @@ The genome coverage ststistics are computed for RNA-seq data and include counts 
 
 The above metrics are computed for continuous and split mapped reads. An aggregated total is computed across elements and read types too.
 
+The `--uniq` (or `-u`) command line flag allows reporting of genome coverage statistics for uniquely mapped reads too.
+
 == Output file example:
 
 An example of the output `JSON` file with all the statistics is shown below. The `insert_sizes` map has been truncated for readability.
@@ -227,6 +229,67 @@ An example of the output `JSON` file with all the statistics is shown below. The
 		}
 	}
 }
+----
+
+The genomic coverage statistics for uniquely mapped reads will be reported as an additional JSON object:
+
+[source, json]
+----
+{
+	"coverage": {
+		"total": {
+			"exonic_intronic": 4101,
+			"intron": 24977,
+			"exon": 13058,
+			"intergenic": 4,
+			"others": 0,
+			"total": 42140
+		},
+		"continuous": {
+			"exonic_intronic": 3700,
+			"intron": 24905,
+			"exon": 6882,
+			"intergenic": 4,
+			"others": 0,
+			"total": 35491
+		},
+		"split": {
+			"exonic_intronic": 401,
+			"intron": 72,
+			"exon": 6176,
+			"intergenic": 0,
+			"others": 0,
+			"total": 6649
+		}
+	},
+	"coverageUniq": {
+		"total": {
+			"exonic_intronic": 1034,
+			"intron": 10751,
+			"exon": 1850,
+			"intergenic": 4,
+			"others": 0,
+			"total": 13639
+		},
+		"continuous": {
+			"exonic_intronic": 933,
+			"intron": 10682,
+			"exon": 1083,
+			"intergenic": 4,
+			"others": 0,
+			"total": 12702
+		},
+		"split": {
+			"exonic_intronic": 101,
+			"intron": 69,
+			"exon": 767,
+			"intergenic": 0,
+			"others": 0,
+			"total": 937
+		}
+	},
+	"general": {
+	...
 ----
 
 == License

@@ -14,12 +14,13 @@ func checkTest(err error, t *testing.T) {
 }
 
 var (
-	bamFile              = "data/process-test.bam"
-	expectedGeneralJSON  = "data/expected-general.json"
-	expectedCoverageJSON = "data/expected-coverage.json"
-	annotationFile       = "data/coverage-test.bed"
-	maxBuf               = 1000000
-	reads                = -1
+	bamFile                  = "data/process-test.bam"
+	expectedGeneralJSON      = "data/expected-general.json"
+	expectedCoverageJSON     = "data/expected-coverage.json"
+	expectedCoverageUniqJSON = "data/expected-coverage-uniq.json"
+	annotationFile           = "data/coverage-test.bed"
+	maxBuf                   = 1000000
+	reads                    = -1
 )
 
 func readExpected(path string, t *testing.T) []byte {
@@ -33,7 +34,7 @@ func readExpected(path string, t *testing.T) []byte {
 
 func TestGeneral(t *testing.T) {
 	var b bytes.Buffer
-	out, err := Process(bamFile, "", runtime.GOMAXPROCS(-1), maxBuf, reads)
+	out, err := Process(bamFile, "", runtime.GOMAXPROCS(-1), maxBuf, reads, false)
 	checkTest(err, t)
 	l := len(out)
 	if l > 1 {
@@ -52,7 +53,7 @@ func TestGeneral(t *testing.T) {
 
 func TestCoverage(t *testing.T) {
 	var b bytes.Buffer
-	out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads)
+	out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, false)
 	checkTest(err, t)
 	l := len(out)
 	if l > 2 {
@@ -73,14 +74,37 @@ func TestCoverage(t *testing.T) {
 	}
 }
 
+func TestCoverageUniq(t *testing.T) {
+	var b bytes.Buffer
+	out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, true)
+	checkTest(err, t)
+	l := len(out)
+	if l > 3 {
+		t.Errorf("(Process) Expected StatsMap of length 3, got %d", l)
+	}
+	_, ok := out["general"].(*GeneralStats)
+	if !ok {
+		t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
+	}
+	_, ok = out["coverage"].(*CoverageStats)
+	if !ok {
+		t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverage"])
+	}
+	OutputJSON(&b, out)
+	stats := readExpected(expectedCoverageUniqJSON, t)
+	if len(b.Bytes()) != len(stats) {
+		t.Error("(Proces) CoverageStats are different")
+	}
+}
+
 func BenchmarkGeneral(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Process(bamFile, "", runtime.GOMAXPROCS(-1), maxBuf, reads)
+		Process(bamFile, "", runtime.GOMAXPROCS(-1), maxBuf, reads, false)
 	}
 }
 
 func BenchmarkCoverage(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads)
+		Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, false)
 	}
 }

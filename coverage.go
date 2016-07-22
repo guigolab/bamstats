@@ -17,6 +17,7 @@ type CoverageStats struct {
 	Total      ElementStats `json:"total"`
 	Continuous ElementStats `json:"continuous"`
 	Split      ElementStats `json:"split"`
+	uniq       bool
 }
 
 // Update updates all counts from a Stats instance.
@@ -83,6 +84,9 @@ func updateCount(r *sam.Record, elems map[string]uint8, st *ElementStats) {
 // Collect collects genome coverage statistics from a sam.Record.
 func (s *CoverageStats) Collect(record *sam.Record, index *RtreeMap) {
 	if index == nil || !isPrimary(record) || isUnmapped(record) {
+		return
+	}
+	if s.uniq && !isUniq(record) {
 		return
 	}
 	elements := map[string]uint8{}
