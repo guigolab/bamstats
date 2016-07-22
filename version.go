@@ -9,7 +9,7 @@ const (
 )
 
 // PreVersionString indicates wheather the program is a pre-release.
-var PreVersionString = "-dev"
+var PreVersionString = ""
 
 // Version returns the current version string.
 func Version() string {
