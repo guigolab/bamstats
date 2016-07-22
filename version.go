@@ -4,12 +4,12 @@ import "fmt"
 
 // Constants for Major and Minor version numbers.
 const (
-	VersionNumber      = 0.2
+	VersionNumber      = 0.3
 	MinorVersionNumber = 0
 )
 
 // PreVersionString indicates wheather the program is a pre-release.
-var PreVersionString = ""
+var PreVersionString = "-dev"
 
 // Version returns the current version string.
 func Version() string {
