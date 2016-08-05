@@ -39,7 +39,7 @@ $(COMPRESSED_BINARIES):
 $(COMPRESSED_BINARIES:%=upload-%): upload-%: prepareRelease
 	$(eval FILE := $(subst upload-,,"$@"))
 	$(eval INFO := $(subst /, ,"$(subst /$(CMD),,$(FILE))"))
-	@github-release upload -t $(TAG) -n $(CMD)-$(word 2, $(INFO))-$(word 3, $(INFO)) -f $(FILE) 
+	@github-release upload -t $(TAG) -n $(CMD)-$(TAG)-$(word 2, $(INFO))-$(word 3, $(INFO)) -f $(FILE) 
 
 prepareRelease: 
 	$(eval TAG := $(shell git describe --abbrev=0 --tags))
@@ -49,7 +49,7 @@ prepareRelease:
 
 release: prepareRelease compress
 	$(eval VER := $(shell bin/bamstats --version | cut -d' ' -f3 | sed 's/^/v/'))
-	@[[ $(VER) == $(TAG) ]] && github-release release -t $(TAG) $(PRE) -d $(DESC) || echo "Wrong release version"
+	@[[ $(VER) == $(TAG) ]] && github-release release -t $(TAG) $(PRE) -d "$(DESC)" || echo "Wrong release version"
 	@[[ $(VER) == $(TAG) ]]	&& $(MAKE) $(COMPRESSED_BINARIES:%=upload-%) || true
 
 bin/$(CMD): bin/$(OS)/$(ARCH)/$(CMD)
