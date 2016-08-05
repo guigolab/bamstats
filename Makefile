@@ -1,4 +1,5 @@
-.PHONY: build prepareRelase release bench profile deploy clean deepclean
+.PHONY: build compress prepareRelase release bench profile deploy clean deepclean
+SHELL := /bin/bash
 
 CMD:= bamstats
 LDFLAGS :=
@@ -35,7 +36,7 @@ $(COMPRESSED_BINARIES):
 	@tar -jcf "$@" $(BINARY)
 	@echo DONE
 
-$(COMPRESSED_BINARIES:%=upload-%): upload-%: checkReleaseVersion
+$(COMPRESSED_BINARIES:%=upload-%): upload-%: prepareRelease
 	$(eval FILE := $(subst upload-,,"$@"))
 	$(eval INFO := $(subst /, ,"$(subst /$(CMD),,$(FILE))"))
 	@echo github-release upload -t $(TAG) -n $(CMD)-$(word 2, $(INFO))-$(word 3, $(INFO)) -f $(FILE) 
@@ -46,18 +47,13 @@ prepareRelease:
 	$(eval LDFLAGS := -ldflags "-X github.com/bamstats.PreVersionString=")
 	$(eval PRE := -p)
 
-checkReleaseVersion: prepareRelease
-	ifneq ($(VER), $(TAG))
-		$(error Wrong release version)
-	endif
-
-release: checkReleaseVersion compress
+release: prepareRelease compress
 	$(eval VER := $(shell bin/bamstats --version | cut -d' ' -f3 | sed 's/^/v/'))
-	@echo github-release release -t $(TAG) $(PRE) -d $(DESC)
-	@ $(MAKE) $(COMPRESSED_BINARIES:%=upload-%)
+	@[[ $(VER) == $(TAG) ]] && echo github-release release -t $(TAG) $(PRE) -d $(DESC) || echo "Wrong release version"
+	@[[ $(VER) == $(TAG) ]]	&& $(MAKE) $(COMPRESSED_BINARIES:%=upload-%) || true
 
 bin/$(CMD): bin/$(OS)/$(ARCH)/$(CMD)
-	@ln -s $$PWD/bin/$(OS)/$(ARCH)/$(CMD) bin/$(CMD) || true
+	@ln -s $$PWD/bin/$(OS)/$(ARCH)/$(CMD) bin/$(CMD)
 
 bench:
 	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof
