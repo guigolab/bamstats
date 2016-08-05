@@ -49,7 +49,8 @@ prepareRelease:
 
 release: prepareRelease compress
 	$(eval VER := $(shell bin/bamstats --version | cut -d' ' -f3 | sed 's/^/v/'))
-	@[[ $(VER) == $(TAG) ]] && (github-release release -t $(TAG) $(PRE) -d "$(DESC)" || true) || echo "Wrong release version"
+	@[[ $(VER) == $(TAG) ]] && git push && git push --tags || echo "Wrong release version"
+	@[[ $(VER) == $(TAG) ]] && (github-release release -t $(TAG) $(PRE) -d "$(DESC)" || true) || true
 	@[[ $(VER) == $(TAG) ]]	&& $(MAKE) $(COMPRESSED_BINARIES:%=upload-%) || true
 
 bin/$(CMD): bin/$(OS)/$(ARCH)/$(CMD)
