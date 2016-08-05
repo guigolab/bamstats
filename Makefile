@@ -1,33 +1,63 @@
-.PHONY: build release releaseFlag bench profile deploy clean deepclean
+.PHONY: build prepareRelase release bench profile deploy clean deepclean
 
-CMD=bamstats
-LDFLAGS=
-OS=$(shell go env GOOS)
-ARCH=$(shell go env GOARCH)
+CMD:= bamstats
+LDFLAGS :=
+OS := $(shell go env GOOS)
+ARCH := $(shell go env GOARCH)
 
-build: bin/linux/amd64/$(CMD) \
-			 bin/darwin/amd64/$(CMD) \
-			 bin/$(CMD)
+ENVS := \
+	linux/386 \
+	linux/amd64 \
+	darwin/386 \
+	darwin/amd64 \
 
-release: prepareRelease build
+BINARIES := $(ENVS:%=bin/%/$(CMD))
+COMPRESSED_BINARIES := $(BINARIES:=.tar.bz2)
 
-prepareRelease:
-	$(eval LDFLAGS=-ldflags "-X github.com/bamstats.PreVersionString=")
+build: $(BINARIES) bin/$(CMD)
+
+compress: build $(COMPRESSED_BINARIES)
+
+$(ENVS):
+	@$(MAKE) bin/"$@"/$(CMD)
+
+$(BINARIES): cli/*.go *.go GoDeps/GoDeps.json
+	$(eval TERMS := $(subst /, ,"$@"))
+	$(eval GOOS := $(word 2, $(TERMS)))
+	$(eval GOARCH := $(word 3, $(TERMS)))
+	@echo -n Building $(GOOS)-$(GOARCH)...
+	@cd cli && GOARCH=$(GOARCH) GOOS=$(GOOS) go build $(LDFLAGS) -o ../"$@"
+	@echo DONE
+
+$(COMPRESSED_BINARIES):
+	$(eval BINARY := $(subst .tar.bz2,,"$@"))
+	@echo -n Compressing $(BINARY)...
+	@tar -jcf "$@" $(BINARY)
+	@echo DONE
+
+$(COMPRESSED_BINARIES:%=upload-%): upload-%: checkReleaseVersion
+	$(eval FILE := $(subst upload-,,"$@"))
+	$(eval INFO := $(subst /, ,"$(subst /$(CMD),,$(FILE))"))
+	@echo github-release upload -t $(TAG) -n $(CMD)-$(word 2, $(INFO))-$(word 3, $(INFO)) -f $(FILE) 
+
+prepareRelease: 
+	$(eval TAG := $(shell git describe --abbrev=0 --tags))
+	$(eval DESC := $(shell git cat-file -p  $(shell git rev-parse $(TAG)) | tail -n+6))
+	$(eval LDFLAGS := -ldflags "-X github.com/bamstats.PreVersionString=")
+	$(eval PRE := -p)
+
+checkReleaseVersion: prepareRelease
+	ifneq ($(VER), $(TAG))
+		$(error Wrong release version)
+	endif
+
+release: checkReleaseVersion compress
+	$(eval VER := $(shell bin/bamstats --version | cut -d' ' -f3 | sed 's/^/v/'))
+	@echo github-release release -t $(TAG) $(PRE) -d $(DESC)
+	@ $(MAKE) $(COMPRESSED_BINARIES:%=upload-%)
 
 bin/$(CMD): bin/$(OS)/$(ARCH)/$(CMD)
-	@ln -s $$PWD/bin/$(OS)/$(ARCH)/$(CMD) bin/$(CMD)
-
-bin/darwin/386/$(CMD): cli/*.go *.go GoDeps/GoDeps.json
-	@cd cli && GOARCH=386 GOOS=darwin go build $(LDFLAGS) -o ../"$@"
-
-bin/linux/386/$(CMD): cli/*.go *.go GoDeps/GoDeps.json
-	@cd cli && GOARCH=386 GOOS=linux go build $(LDFLAGS) -o ../"$@"
-
-bin/darwin/amd64/$(CMD): cli/*.go *.go GoDeps/GoDeps.json
-	@cd cli && GOARCH=amd64 GOOS=darwin go build $(LDFLAGS) -o ../"$@"
-
-bin/linux/amd64/$(CMD): cli/*.go *.go GoDeps/GoDeps.json
-	@cd cli && GOARCH=amd64 GOOS=linux go build $(LDFLAGS) -o ../"$@"
+	@ln -s $$PWD/bin/$(OS)/$(ARCH)/$(CMD) bin/$(CMD) || true
 
 bench:
 	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof
