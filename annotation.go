@@ -10,6 +10,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/dhconnelly/rtreego"
 )
@@ -78,13 +79,26 @@ func CreateIndex(fname string) *RtreeMap {
 	return createIndex(reader)
 }
 
+func insertInTreeParallel(wg *sync.WaitGroup, rt *rtreego.Rtree, feats []*Feature) {
+	defer wg.Done()
+	for _, feat := range feats {
+		rt.Insert(feat)
+	}
+}
+
 func createIndex(reader *bufio.Scanner) *RtreeMap {
 	trees := make(RtreeMap)
+	regions := make(map[string][]*Feature)
+
 	for reader.Scan() {
 		line := strings.Split(reader.Text(), "\t")
 		chr := line[0]
+		_, ok := regions[chr]
+		if !ok {
+			var p []*Feature
+			regions[chr] = p
+		}
 		element := line[3]
-		rt := trees.Get(chr)
 		begin, err := strconv.ParseFloat(line[1], 64)
 		if err != nil {
 			log.Panic("Cannot convert to float64")
@@ -99,8 +113,15 @@ func createIndex(reader *bufio.Scanner) *RtreeMap {
 		if err != nil {
 			log.Panic(err)
 		}
-		rt.Insert(&Feature{rect, chr, element})
+		regions[chr] = append(regions[chr], &Feature{rect, chr, element})
 	}
+
+	var wg sync.WaitGroup
+	for chr := range regions {
+		wg.Add(1)
+		go insertInTreeParallel(&wg, trees.Get(chr), regions[chr])
+	}
+	wg.Wait()
 
 	return &trees
 }
