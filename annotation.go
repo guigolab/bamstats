@@ -2,8 +2,12 @@ package bamstats
 
 import (
 	"bufio"
+	"compress/bzip2"
+	"compress/gzip"
+	"io"
 	"log"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -48,14 +52,28 @@ func (t RtreeMap) Get(chr string) *rtreego.Rtree {
 	return t[chr]
 }
 
+func getFileReader(f *os.File, fname string) *bufio.Scanner {
+	var r io.Reader = f
+
+	switch path.Ext(fname) {
+	case ".gz":
+		zipReader, err := gzip.NewReader(f)
+		check(err)
+		r = zipReader
+	case ".bz2":
+		r = bzip2.NewReader(f)
+	}
+	return bufio.NewScanner(r)
+}
+
 // CreateIndex creates the Rtree indices for the specified annotation file. It builds a Rtree
 // for each chromosome and returns a RtreeMap having the chromosome names as keys.
 func CreateIndex(fname string) *RtreeMap {
-
 	f, err := os.Open(fname)
 	defer f.Close()
 	check(err)
-	reader := bufio.NewScanner(f)
+
+	reader := getFileReader(f, fname)
 
 	return createIndex(reader)
 }
