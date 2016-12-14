@@ -124,7 +124,7 @@ func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int, 
 	if annotation != "" {
 		log.Infof("Creating index for %s", annotation)
 		start := time.Now()
-		index = CreateIndex(annotation)
+		index = CreateIndex(annotation, cpu)
 		log.Infof("Index done in %v", time.Since(start))
 	}
 	start := time.Now()

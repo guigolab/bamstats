@@ -10,7 +10,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/dhconnelly/rtreego"
 )
@@ -69,24 +68,24 @@ func getFileReader(f *os.File, fname string) *bufio.Scanner {
 
 // CreateIndex creates the Rtree indices for the specified annotation file. It builds a Rtree
 // for each chromosome and returns a RtreeMap having the chromosome names as keys.
-func CreateIndex(fname string) *RtreeMap {
+func CreateIndex(fname string, cpu int) *RtreeMap {
 	f, err := os.Open(fname)
 	defer f.Close()
 	check(err)
 
 	reader := getFileReader(f, fname)
 
-	return createIndex(reader)
+	return createIndex(reader, cpu)
 }
 
-func insertInTreeParallel(wg *sync.WaitGroup, rt *rtreego.Rtree, feats []*Feature) {
-	defer wg.Done()
+func insertInTree(sem chan bool, rt *rtreego.Rtree, feats []*Feature) {
+	defer func() { <-sem }()
 	for _, feat := range feats {
 		rt.Insert(feat)
 	}
 }
 
-func createIndex(reader *bufio.Scanner) *RtreeMap {
+func createIndex(reader *bufio.Scanner, cpu int) *RtreeMap {
 	trees := make(RtreeMap)
 	regions := make(map[string][]*Feature)
 
@@ -116,12 +115,14 @@ func createIndex(reader *bufio.Scanner) *RtreeMap {
 		regions[chr] = append(regions[chr], &Feature{rect, chr, element})
 	}
 
-	var wg sync.WaitGroup
+	sem := make(chan bool, cpu)
 	for chr := range regions {
-		wg.Add(1)
-		go insertInTreeParallel(&wg, trees.Get(chr), regions[chr])
+		sem <- true
+		go insertInTree(sem, trees.Get(chr), regions[chr])
 	}
-	wg.Wait()
+	for i := 0; i < cap(sem); i++ {
+		sem <- true
+	}
 
 	return &trees
 }
