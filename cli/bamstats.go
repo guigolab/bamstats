@@ -4,6 +4,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bamstats"
 	"github.com/spf13/cobra"
+	"runtime"
 )
 
 var (
@@ -24,9 +25,9 @@ func run(cmd *cobra.Command, args []string) (err error) {
 		return
 	}
 	log.SetLevel(level)
-
 	// Get stats
-	log.Infof("Running %s", cmd.Use)
+	log.Infof("Running %s %s", cmd.Use, bamstats.Version())
+	log.Infof("Using %v out of %v logical CPUs", cpu, runtime.NumCPU())
 	stats, err := bamstats.Process(bam, annotation, cpu, maxBuf, reads, uniq)
 	if err != nil {
 		return
