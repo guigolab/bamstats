@@ -65,7 +65,7 @@ profile: cpu.prof
 install: cli/*.go *.go GoDeps/GoDeps.json
 	@cd cli && go install && mv $$GOPATH/bin/cli $$GOPATH/bin/bamstats
 
-deploy: build
+deploy: bin/linux/amd64/$(CMD)
 	@scp bin/linux/amd64/$(CMD) ant:~/bin/$(CMD)
 
 clean: 
