@@ -105,12 +105,15 @@ func IsValidRecord(r *Record) bool {
 // Tag returns an Aux tag whose tag ID matches the first two bytes of tag and true.
 // If no tag matches, nil and false are returned.
 func (r *Record) Tag(tag []byte) (v Aux, ok bool) {
-	for i := range r.AuxFields {
-		if bytes.Compare(r.AuxFields[i][:2], tag) == 0 {
-			return r.AuxFields[i], true
+	if len(tag) < 2 {
+		panic("sam: tag too short")
+	}
+	for _, aux := range r.AuxFields {
+		if aux.matches(tag) {
+			return aux, true
 		}
 	}
-	return
+	return nil, false
 }
 
 // RefID returns the reference ID for the Record.
@@ -152,14 +155,10 @@ func max(a, b int) int {
 // is false.
 func (r *Record) End() int {
 	pos := r.Pos
-	end := r.Pos
-	var con Consume
+	end := pos
 	for _, co := range r.Cigar {
-		con = co.Type().Consumes()
-		pos += co.Len() * con.Reference
-		if con.Query != 0 {
-			end = max(end, pos)
-		}
+		pos += co.Len() * co.Type().Consumes().Reference
+		end = max(end, pos)
 	}
 	return end
 }

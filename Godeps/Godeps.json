@@ -6,25 +6,25 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.10.0-14-g081307d",
-			"Rev": "081307d9bc1364753142d5962fc1d795c742baaf"
+			"ImportPath": "github.com/sirupsen/logrus",
+			"Comment": "v0.11.0-25-g881bee4",
+			"Rev": "881bee4e20a5d11a6a88a5667c6f292072ac1963"
 		},
 		{
 			"ImportPath": "github.com/biogo/hts/bam",
-			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
+			"Rev": "319a3a2e4e1c92600d37561287b8c74d6d82f016"
 		},
 		{
 			"ImportPath": "github.com/biogo/hts/bgzf",
-			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
+			"Rev": "319a3a2e4e1c92600d37561287b8c74d6d82f016"
 		},
 		{
 			"ImportPath": "github.com/biogo/hts/internal",
-			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
+			"Rev": "319a3a2e4e1c92600d37561287b8c74d6d82f016"
 		},
 		{
 			"ImportPath": "github.com/biogo/hts/sam",
-			"Rev": "50da7d4131a3b5c9d063932461cab4d1fafb20b0"
+			"Rev": "319a3a2e4e1c92600d37561287b8c74d6d82f016"
 		},
 		{
 			"ImportPath": "github.com/dhconnelly/rtreego",
