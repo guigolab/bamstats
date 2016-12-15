@@ -3,12 +3,15 @@ package bamstats
 
 import (
 	"errors"
+	"io"
 	"os"
 	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/biogo/hts/bam"
+	"github.com/biogo/hts/bgzf"
+	bgzfidx "github.com/biogo/hts/bgzf/index"
 	"github.com/biogo/hts/sam"
 )
 
@@ -22,6 +25,11 @@ type Stats interface {
 	Merge(others chan Stats)
 	Collect(record *sam.Record, index *RtreeMap)
 	Finalize()
+}
+
+type IndexWorkerData struct {
+	Ref   *sam.Reference
+	Chunk bgzf.Chunk
 }
 
 // StatsMap is a map of Stats instances with string keys.
@@ -58,8 +66,62 @@ func getStatsMap(stats []Stats) StatsMap {
 	return m
 }
 
-func worker(in chan *sam.Record, out chan StatsMap, index *RtreeMap, uniq bool) {
+func workerIndex(id int, fname string, in chan IndexWorkerData, out chan StatsMap, index *RtreeMap, uniq bool) {
 	defer wg.Done()
+	logger := log.WithFields(log.Fields{
+		"Worker": id,
+	})
+	logger.Debug("Starting")
+	f, err := os.Open(fname)
+	defer f.Close()
+	if err != nil {
+		panic(err)
+	}
+	br, err := bam.NewReader(f, 1)
+	defer br.Close()
+	if err != nil {
+		panic(err)
+	}
+	stats := []Stats{NewGeneralStats()}
+	if index != nil {
+		stats = append(stats, NewCoverageStats())
+		if uniq {
+			cs := NewCoverageStats()
+			cs.uniq = true
+			stats = append(stats, cs)
+		}
+	}
+	for data := range in {
+		logger.WithFields(log.Fields{
+			"Reference": data.Ref.Name(),
+			"Length":    data.Ref.Len(),
+		}).Debugf("Reading reference")
+		it, err := bam.NewIterator(br, []bgzf.Chunk{data.Chunk})
+		defer it.Close()
+		if err != nil {
+			if err != io.EOF {
+				log.Println(err)
+			}
+			it.Close()
+			panic(err)
+		}
+		for it.Next() {
+			for _, s := range stats {
+				s.Collect(it.Record(), index)
+			}
+		}
+	}
+	logger.Debug("Done")
+
+	out <- getStatsMap(stats)
+}
+
+func worker(id int, in chan *sam.Record, out chan StatsMap, index *RtreeMap, uniq bool) {
+	defer wg.Done()
+	logger := log.WithFields(log.Fields{
+		"worker": id,
+	})
+	logger.Debug("Starting")
 	stats := []Stats{NewGeneralStats()}
 	if index != nil {
 		stats = append(stats, NewCoverageStats())
@@ -74,9 +136,67 @@ func worker(in chan *sam.Record, out chan StatsMap, index *RtreeMap, uniq bool) 
 			s.Collect(record, index)
 		}
 	}
-	log.Debug("Worker DONE!")
+	logger.Debug("Done")
 
 	out <- getStatsMap(stats)
+}
+
+func readBAMWithIndex(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (chan StatsMap, error) {
+	f, err := os.Open(bamFile)
+	defer f.Close()
+	if err != nil {
+		return nil, err
+	}
+	br, err := bam.NewReader(f, 1)
+	defer br.Close()
+	if err != nil {
+		return nil, err
+	}
+	log.Infof("Opening BAM index %s", bamFile+".bai")
+	i, err := os.Open(bamFile + ".bai")
+	defer i.Close()
+	if err != nil {
+		return nil, err
+	}
+	bai, err := bam.ReadIndex(i)
+	if err != nil {
+		return nil, err
+	}
+	h := br.Header()
+	nRefs := len(h.Refs())
+	stats := make(chan StatsMap, cpu)
+	chunks := make(chan IndexWorkerData, cpu)
+	nWorkers := cpu
+	if cpu > nRefs {
+		log.WithFields(log.Fields{
+			"References": nRefs,
+		}).Warnf("Limiting the number of workers to the number of BAM references")
+		nWorkers = nRefs
+	}
+	for i := 0; i < nWorkers; i++ {
+		wg.Add(1)
+		go workerIndex(i+1, bamFile, chunks, stats, index, uniq)
+	}
+	for _, ref := range h.Refs() {
+		refChunks, _ := bai.Chunks(ref, 0, ref.Len())
+		if err != nil {
+			if err != io.EOF && err != bgzfidx.ErrInvalid {
+				log.Error(err)
+			}
+			return nil, err
+		}
+		if len(refChunks) > 0 {
+			if len(refChunks) > 1 {
+				log.Debugf("%v: %v chunks", ref.Name(), len(refChunks))
+			}
+			for _, chunk := range refChunks {
+				chunks <- IndexWorkerData{ref, chunk}
+			}
+		}
+	}
+	close(chunks)
+
+	return stats, nil
 }
 
 func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (chan StatsMap, error) {
@@ -95,7 +215,7 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int, un
 	for i := 0; i < cpu; i++ {
 		wg.Add(1)
 		input[i] = make(chan *sam.Record, maxBuf)
-		go worker(input[i], stats, index, uniq)
+		go worker(i+1, input[i], stats, index, uniq)
 	}
 	c := 0
 	for {
@@ -129,15 +249,20 @@ func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int, 
 	}
 	start := time.Now()
 	log.Infof("Collecting stats for %s", bamFile)
-	stats, err := readBAM(bamFile, index, cpu, maxBuf, reads, uniq)
+	process := readBAMWithIndex
+	if _, err := os.Stat(bamFile + ".bai"); os.IsNotExist(err) || cpu == 1 {
+		log.Warning("Not using BAM index")
+		process = readBAM
+	}
+	stats, err := process(bamFile, index, cpu, maxBuf, reads, uniq)
 	if err != nil {
 		return nil, err
 	}
 	go func() {
 		wg.Wait()
 		close(stats)
+		log.Infof("Stats done in %v", time.Since(start))
 	}()
-	log.Infof("Stats done in %v", time.Since(start))
 	st := <-stats
 	st.Merge(stats)
 	return st, nil
