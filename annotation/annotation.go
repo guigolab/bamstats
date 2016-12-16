@@ -1,4 +1,4 @@
-package bamstats
+package annotation
 
 import (
 	"bufio"
@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bamstats/utils"
 	"github.com/dhconnelly/rtreego"
 )
 
@@ -58,7 +59,7 @@ func getFileReader(f *os.File, fname string) *bufio.Scanner {
 	switch path.Ext(fname) {
 	case ".gz":
 		zipReader, err := gzip.NewReader(f)
-		check(err)
+		utils.Check(err)
 		r = zipReader
 	case ".bz2":
 		r = bzip2.NewReader(f)
@@ -71,7 +72,7 @@ func getFileReader(f *os.File, fname string) *bufio.Scanner {
 func CreateIndex(fname string, cpu int) *RtreeMap {
 	f, err := os.Open(fname)
 	defer f.Close()
-	check(err)
+	utils.Check(err)
 
 	reader := getFileReader(f, fname)
 

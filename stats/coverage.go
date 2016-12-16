@@ -1,6 +1,9 @@
-package bamstats
+package stats
 
-import "github.com/biogo/hts/sam"
+import (
+	"github.com/bamstats/annotation"
+	"github.com/bamstats/sam"
+)
 
 // ElementStats represents mappings statistics for genomic elements
 type ElementStats struct {
@@ -82,19 +85,19 @@ func updateCount(r *sam.Record, elems map[string]uint8, st *ElementStats) {
 }
 
 // Collect collects genome coverage statistics from a sam.Record.
-func (s *CoverageStats) Collect(record *sam.Record, index *RtreeMap) {
-	if index == nil || !isPrimary(record) || isUnmapped(record) {
+func (s *CoverageStats) Collect(record *sam.Record, index *annotation.RtreeMap) {
+	if index == nil || !record.IsPrimary() || record.IsUnmapped() {
 		return
 	}
-	if s.uniq && !isUniq(record) {
+	if s.uniq && !record.IsUniq() {
 		return
 	}
 	elements := map[string]uint8{}
-	for _, mappingLocation := range getBlocks(record) {
-		results := QueryIndex(index.Get(mappingLocation.Chrom()), mappingLocation.Start(), mappingLocation.End())
-		getElements(mappingLocation, &results, elements)
+	for _, mappingLocation := range record.GetBlocks() {
+		results := annotation.QueryIndex(index.Get(mappingLocation.Chrom()), mappingLocation.Start(), mappingLocation.End())
+		mappingLocation.GetElements(&results, elements)
 	}
-	if isSplit(record) {
+	if record.IsSplit() {
 		updateCount(record, elements, &s.Split)
 	} else {
 		updateCount(record, elements, &s.Continuous)

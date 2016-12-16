@@ -2,6 +2,8 @@ package bamstats
 
 import (
 	"bytes"
+	. "github.com/bamstats/stats"
+	. "github.com/bamstats/utils"
 	"os"
 	"runtime"
 	"testing"

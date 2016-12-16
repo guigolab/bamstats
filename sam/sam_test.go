@@ -1,10 +1,11 @@
-package bamstats
+package sam
 
 import (
 	"bytes"
 	"testing"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bamstats/annotation"
 	"github.com/biogo/hts/sam"
 )
 

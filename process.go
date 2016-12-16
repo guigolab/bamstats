@@ -9,6 +9,9 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/bamstats/annotation"
+	bssam "github.com/bamstats/sam"
+	"github.com/bamstats/stats"
 	"github.com/biogo/hts/bam"
 	"github.com/biogo/hts/bgzf"
 	bgzfidx "github.com/biogo/hts/bgzf/index"
@@ -19,54 +22,14 @@ func init() {
 	log.SetLevel(log.WarnLevel)
 }
 
-// Stats represents mapping statistics.
-type Stats interface {
-	Update(other Stats)
-	Merge(others chan Stats)
-	Collect(record *sam.Record, index *RtreeMap)
-	Finalize()
-}
-
 type IndexWorkerData struct {
 	Ref   *sam.Reference
 	Chunk bgzf.Chunk
 }
 
-// StatsMap is a map of Stats instances with string keys.
-type StatsMap map[string]Stats
-
 var wg sync.WaitGroup
 
-// Merge merges instances of StatsMap
-func (sm *StatsMap) Merge(stats chan StatsMap) {
-	for s := range stats {
-		for key, stat := range *sm {
-			if otherStat, ok := s[key]; ok {
-				stat.Update(otherStat)
-			}
-		}
-	}
-}
-
-func getStatsMap(stats []Stats) StatsMap {
-	m := make(StatsMap)
-	for _, s := range stats {
-		s.Finalize()
-		switch s.(type) {
-		case *GeneralStats:
-			m["general"] = s
-		case *CoverageStats:
-			if s.(*CoverageStats).uniq {
-				m["coverageUniq"] = s
-			} else {
-				m["coverage"] = s
-			}
-		}
-	}
-	return m
-}
-
-func workerIndex(id int, fname string, in chan IndexWorkerData, out chan StatsMap, index *RtreeMap, uniq bool) {
+func workerIndex(id int, fname string, in chan IndexWorkerData, out chan stats.StatsMap, index *annotation.RtreeMap, uniq bool) {
 	defer wg.Done()
 	logger := log.WithFields(log.Fields{
 		"Worker": id,
@@ -82,15 +45,7 @@ func workerIndex(id int, fname string, in chan IndexWorkerData, out chan StatsMa
 	if err != nil {
 		panic(err)
 	}
-	stats := []Stats{NewGeneralStats()}
-	if index != nil {
-		stats = append(stats, NewCoverageStats())
-		if uniq {
-			cs := NewCoverageStats()
-			cs.uniq = true
-			stats = append(stats, cs)
-		}
-	}
+	sm := stats.NewStatsMap(true, (index != nil), uniq)
 	for data := range in {
 		logger.WithFields(log.Fields{
 			"Reference": data.Ref.Name(),
@@ -106,42 +61,35 @@ func workerIndex(id int, fname string, in chan IndexWorkerData, out chan StatsMa
 			panic(err)
 		}
 		for it.Next() {
-			for _, s := range stats {
-				s.Collect(it.Record(), index)
+			for _, s := range sm {
+				s.Collect(bssam.NewRecord(it.Record()), index)
 			}
 		}
 	}
 	logger.Debug("Done")
 
-	out <- getStatsMap(stats)
+	out <- sm
 }
 
-func worker(id int, in chan *sam.Record, out chan StatsMap, index *RtreeMap, uniq bool) {
+func worker(id int, in chan *sam.Record, out chan stats.StatsMap, index *annotation.RtreeMap, uniq bool) {
 	defer wg.Done()
 	logger := log.WithFields(log.Fields{
 		"worker": id,
 	})
 	logger.Debug("Starting")
-	stats := []Stats{NewGeneralStats()}
-	if index != nil {
-		stats = append(stats, NewCoverageStats())
-		if uniq {
-			cs := NewCoverageStats()
-			cs.uniq = true
-			stats = append(stats, cs)
-		}
-	}
+
+	sm := stats.NewStatsMap(true, (index != nil), uniq)
 	for record := range in {
-		for _, s := range stats {
-			s.Collect(record, index)
+		for _, s := range sm {
+			s.Collect(bssam.NewRecord(record), index)
 		}
 	}
 	logger.Debug("Done")
 
-	out <- getStatsMap(stats)
+	out <- sm
 }
 
-func readBAMWithIndex(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (chan StatsMap, error) {
+func readBAMWithIndex(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (chan stats.StatsMap, error) {
 	f, err := os.Open(bamFile)
 	defer f.Close()
 	if err != nil {
@@ -164,7 +112,7 @@ func readBAMWithIndex(bamFile string, index *RtreeMap, cpu int, maxBuf int, read
 	}
 	h := br.Header()
 	nRefs := len(h.Refs())
-	stats := make(chan StatsMap, cpu)
+	stats := make(chan stats.StatsMap, cpu)
 	chunks := make(chan IndexWorkerData, cpu)
 	nWorkers := cpu
 	if cpu > nRefs {
@@ -199,7 +147,7 @@ func readBAMWithIndex(bamFile string, index *RtreeMap, cpu int, maxBuf int, read
 	return stats, nil
 }
 
-func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (chan StatsMap, error) {
+func readBAM(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (chan stats.StatsMap, error) {
 	f, err := os.Open(bamFile)
 	defer f.Close()
 	if err != nil {
@@ -211,7 +159,7 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int, un
 		return nil, err
 	}
 	input := make([]chan *sam.Record, cpu)
-	stats := make(chan StatsMap, cpu)
+	stats := make(chan stats.StatsMap, cpu)
 	for i := 0; i < cpu; i++ {
 		wg.Add(1)
 		input[i] = make(chan *sam.Record, maxBuf)
@@ -236,15 +184,15 @@ func readBAM(bamFile string, index *RtreeMap, cpu int, maxBuf int, reads int, un
 }
 
 // Process process the input BAM file and collect different mapping stats.
-func Process(bamFile string, annotation string, cpu int, maxBuf int, reads int, uniq bool) (StatsMap, error) {
-	var index *RtreeMap
+func Process(bamFile string, anno string, cpu int, maxBuf int, reads int, uniq bool) (stats.StatsMap, error) {
+	var index *annotation.RtreeMap
 	if bamFile == "" {
 		return nil, errors.New("Please specify a BAM input file")
 	}
-	if annotation != "" {
-		log.Infof("Creating index for %s", annotation)
+	if anno != "" {
+		log.Infof("Creating index for %s", anno)
 		start := time.Now()
-		index = CreateIndex(annotation, cpu)
+		index = annotation.CreateIndex(anno, cpu)
 		log.Infof("Index done in %v", time.Since(start))
 	}
 	start := time.Now()

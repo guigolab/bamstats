@@ -1,4 +1,4 @@
-package bamstats
+package utils
 
 import (
 	"bufio"
@@ -9,20 +9,20 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-func check(err error) {
+func Check(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func max(a, b int) int {
+func Max(a, b int) int {
 	if a < b {
 		return b
 	}
 	return a
 }
 
-func min(a, b int) int {
+func Min(a, b int) int {
 	if a < b {
 		return a
 	}
@@ -32,7 +32,7 @@ func min(a, b int) int {
 // OutputJSON writes the json representation of stats to an io.Writer
 func OutputJSON(writer io.Writer, stats interface{}) {
 	b, err := json.MarshalIndent(stats, "", "\t")
-	check(err)
+	Check(err)
 	writer.Write(b)
 	if w, ok := writer.(*bufio.Writer); ok {
 		w.Flush()
@@ -46,7 +46,7 @@ func NewOutput(output string) io.Writer {
 		return os.Stdout
 	default:
 		f, err := os.Create(output)
-		check(err)
+		Check(err)
 		return bufio.NewWriter(f)
 	}
 }

@@ -1,4 +1,4 @@
-package bamstats
+package utils
 
 import "testing"
 

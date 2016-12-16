@@ -1,4 +1,4 @@
-package bamstats
+package stats
 
 import (
 	"bytes"
@@ -8,7 +8,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/biogo/hts/sam"
+	"github.com/bamstats/annotation"
+	"github.com/bamstats/sam"
 )
 
 // TagMap represents a map of sam tags with integer keys
@@ -193,22 +194,22 @@ func (tm *TagMap) UnmarshalJSON(b []byte) (err error) {
 }
 
 // Collect collects general mapping statistics from a sam.Record.
-func (s *GeneralStats) Collect(r *sam.Record, index *RtreeMap) {
+func (s *GeneralStats) Collect(r *sam.Record, index *annotation.RtreeMap) {
 	NH, hasNH := r.Tag([]byte("NH"))
 	if !hasNH {
 		NH, _ = sam.ParseAux([]byte("NH:i:0"))
 	}
 	NHKey := int(NH.Value().(uint8))
-	if isUnmapped(r) {
+	if r.IsUnmapped() {
 		s.Reads.Total++
 		s.Reads.Unmapped++
 		return
 	}
 	s.Reads.Mappings.Count++
-	if isPrimary(r) {
+	if r.IsPrimary() {
 		s.Reads.Total++
 		s.Reads.Mapped[NHKey]++
-		if isFirstOfValidPair(r) {
+		if r.IsFirstOfValidPair() {
 			s.Pairs.Total++
 			s.Pairs.Mapped[NHKey]++
 			isLen := int(math.Abs(float64(r.TempLen)))

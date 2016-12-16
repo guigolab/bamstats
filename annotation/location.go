@@ -1,4 +1,4 @@
-package bamstats
+package annotation
 
 import (
 	"math"
@@ -6,22 +6,26 @@ import (
 	"github.com/dhconnelly/rtreego"
 )
 
-type location struct {
+type Location struct {
 	chrom      string
 	start, end float64
 }
 
-func (s location) Chrom() string {
+func (s Location) Chrom() string {
 	return s.chrom
 }
-func (s location) Start() float64 {
+func (s Location) Start() float64 {
 	return s.start
 }
-func (s location) End() float64 {
+func (s Location) End() float64 {
 	return s.end
 }
 
-func getElements(loc location, buf *[]rtreego.Spatial, elems map[string]uint8) {
+func NewLocation(chrom string, start, end float64) *Location {
+	return &Location{chrom, start, end}
+}
+
+func (loc *Location) GetElements(buf *[]rtreego.Spatial, elems map[string]uint8) {
 	for _, feature := range *buf {
 		if feature, ok := feature.(*Feature); ok {
 			start := math.Max(loc.Start(), feature.Start())

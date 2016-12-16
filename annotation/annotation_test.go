@@ -1,4 +1,4 @@
-package bamstats
+package annotation
 
 import (
 	"bufio"
