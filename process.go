@@ -12,6 +12,7 @@ import (
 	"github.com/bamstats/annotation"
 	bssam "github.com/bamstats/sam"
 	"github.com/bamstats/stats"
+	"github.com/bamstats/utils"
 	"github.com/biogo/hts/bam"
 	"github.com/biogo/hts/bgzf"
 	bgzfidx "github.com/biogo/hts/bgzf/index"
@@ -214,4 +215,9 @@ func Process(bamFile string, anno string, cpu int, maxBuf int, reads int, uniq b
 	st := <-stats
 	st.Merge(stats)
 	return st, nil
+}
+
+func WriteOutput(output string, st stats.StatsMap) {
+	out := utils.NewOutput(output)
+	utils.OutputJSON(out, st)
 }
