@@ -93,9 +93,24 @@ func (s *MappedPairsStats) Update(other MappedPairsStats) {
 }
 
 // FilterInsertSizes filters out insert size lengths having support below the given percentage of total read-pairs.
-func (s *MappedPairsStats) FilterInsertSizes(percent float64) {
+func (s *MappedPairsStats) FilterInsertSizesPercent(threshold float64, percent bool) {
+	if percent {
+		threshold = float64(s.Total) * (threshold / 100)
+	}
+	fmt.Printf("THRESHOLD: %v\n", threshold)
 	for k, v := range s.InsertSizes {
-		if float64(v) < float64(s.Total)*(percent/100) {
+		if k == 237 {
+			fmt.Printf("237: %v\n", v)
+		}
+		if float64(v) < threshold {
+			delete(s.InsertSizes, k)
+		}
+	}
+}
+
+func (s *MappedPairsStats) FilterInsertSizesLength(minLength, maxLength int) {
+	for k := range s.InsertSizes {
+		if k < minLength || k > maxLength {
 			delete(s.InsertSizes, k)
 		}
 	}
