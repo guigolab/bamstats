@@ -89,3 +89,7 @@ func (r *Record) GetBlocks() []*annotation.Location {
 	blocks = append(blocks, annotation.NewLocation(ref, float64(start), float64(end)))
 	return blocks
 }
+
+func (r *Record) IsReverse() bool {
+	return r.Flags&sam.Reverse == sam.Reverse
+}
