@@ -3,6 +3,7 @@ package main
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bamstats"
+	"github.com/bamstats/utils"
 	"github.com/spf13/cobra"
 	"runtime"
 )
@@ -33,8 +34,8 @@ func run(cmd *cobra.Command, args []string) (err error) {
 		return
 	}
 
-	out := bamstats.NewOutput(output)
-	bamstats.OutputJSON(out, stats)
+	out := utils.NewOutput(output)
+	utils.OutputJSON(out, stats)
 
 	return
 }
