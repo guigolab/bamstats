@@ -26,7 +26,7 @@ chr14	29533	30039	exon
 chr15	30266	30667	exon
 chr16	30975	31109	exon
 `)
-	index := createIndex(bufio.NewScanner(bytes.NewReader(elements)))
+	index := createIndex(bufio.NewScanner(bytes.NewReader(elements)), 1)
 	l := len(*index)
 	if l != 16 {
 		t.Errorf("(createIndex) expected length 15, got %v", l)
@@ -81,7 +81,7 @@ chr1	30266	30667	exon
 chr1	30667	30975	intron
 chr1	30975	31109	exon
 `)
-	index := createIndex(bufio.NewScanner(bytes.NewReader(elements)))
+	index := createIndex(bufio.NewScanner(bytes.NewReader(elements)), 1)
 	for _, item := range []struct {
 		query          location
 		expectedLength int
