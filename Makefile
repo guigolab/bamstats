@@ -1,6 +1,8 @@
 .PHONY: build compress prepareRelase release bench profile deploy clean deepclean
 SHELL := /bin/bash
 
+CMD_DIR=cmd/bamstats
+
 CMD:= bamstats
 LDFLAGS :=
 OS := $(shell go env GOOS)
@@ -22,12 +24,12 @@ compress: build $(COMPRESSED_BINARIES)
 $(ENVS):
 	@$(MAKE) bin/"$@"/$(CMD)
 
-$(BINARIES): cli/*.go *.go GoDeps/GoDeps.json
+$(BINARIES): $(CMD_DIR)/*.go *.go GoDeps/GoDeps.json
 	$(eval TERMS := $(subst /, ,"$@"))
 	$(eval GOOS := $(word 2, $(TERMS)))
 	$(eval GOARCH := $(word 3, $(TERMS)))
 	@echo -n Building $(GOOS)-$(GOARCH)...
-	@cd cli && GOARCH=$(GOARCH) GOOS=$(GOOS) go build $(LDFLAGS) -o ../"$@"
+	@cd $(CMD_DIR) && GOARCH=$(GOARCH) GOOS=$(GOOS) go build $(LDFLAGS) -o ../"$@"
 	@echo DONE
 
 $(COMPRESSED_BINARIES):
@@ -62,8 +64,8 @@ bench:
 profile: cpu.prof
 	@go tool pprof bamstats.test cpu.prof
 
-install: cli/*.go *.go GoDeps/GoDeps.json
-	@cd cli && go install && mv $$GOPATH/bin/cli $$GOPATH/bin/bamstats
+install: $(CMD_DIR)/*.go *.go GoDeps/GoDeps.json
+	@cd $(CMD_DIR) && go install
 
 deploy: bin/linux/amd64/$(CMD)
 	@scp bin/linux/amd64/$(CMD) ant:~/bin/$(CMD)
