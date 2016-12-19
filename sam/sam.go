@@ -1,9 +1,9 @@
 package sam
 
 import (
-	"github.com/bamstats/annotation"
-	"github.com/bamstats/utils"
 	"github.com/biogo/hts/sam"
+	"github.com/guigolab/bamstats/annotation"
+	"github.com/guigolab/bamstats/utils"
 )
 
 type Record struct {

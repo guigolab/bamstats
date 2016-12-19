@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/bamstats"
+	"github.com/guigolab/bamstats"
 	"github.com/spf13/cobra"
 )
 

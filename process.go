@@ -9,14 +9,14 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bamstats/annotation"
-	bssam "github.com/bamstats/sam"
-	"github.com/bamstats/stats"
-	"github.com/bamstats/utils"
 	"github.com/biogo/hts/bam"
 	"github.com/biogo/hts/bgzf"
 	bgzfidx "github.com/biogo/hts/bgzf/index"
 	"github.com/biogo/hts/sam"
+	"github.com/guigolab/bamstats/annotation"
+	bssam "github.com/guigolab/bamstats/sam"
+	"github.com/guigolab/bamstats/stats"
+	"github.com/guigolab/bamstats/utils"
 )
 
 func init() {

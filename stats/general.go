@@ -1,11 +1,10 @@
 package stats
 
 import (
-	"fmt"
 	"math"
 
-	"github.com/bamstats/annotation"
-	"github.com/bamstats/sam"
+	"github.com/guigolab/bamstats/annotation"
+	"github.com/guigolab/bamstats/sam"
 )
 
 // MappedReadsStats represents statistics for mapped reads

@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bamstats/utils"
 	"github.com/dhconnelly/rtreego"
+	"github.com/guigolab/bamstats/utils"
 )
 
 // RtreeMap is a map of pointers to Rtree with string keys.

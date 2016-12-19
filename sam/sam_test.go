@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bamstats/annotation"
 	"github.com/biogo/hts/sam"
+	"github.com/guigolab/bamstats/annotation"
 )
 
 func sliceEq(a, b []location) bool {
