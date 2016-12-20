@@ -10,6 +10,6 @@ type RefChunk struct {
 	Chunks []bgzf.Chunk
 }
 
-func NewRefChunk(ref *sam.Reference, chunk bgzf.Chunk) *RefChunk {
-	return &RefChunk{ref, []bgzf.Chunk{chunk}}
+func NewRefChunk(ref *sam.Reference, chunk []bgzf.Chunk) *RefChunk {
+	return &RefChunk{ref, chunk}
 }
