@@ -2,7 +2,6 @@
 package bamstats
 
 import (
-	"errors"
 	"io"
 	"os"
 	"sync"
@@ -180,9 +179,6 @@ func readBAM(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, re
 // Process process the input BAM file and collect different mapping stats.
 func Process(bamFile string, anno string, cpu int, maxBuf int, reads int, uniq bool) (stats.StatsMap, error) {
 	var index *annotation.RtreeMap
-	if bamFile == "" {
-		return nil, errors.New("Please specify a BAM input file")
-	}
 	if anno != "" {
 		log.Infof("Creating index for %s", anno)
 		start := time.Now()
