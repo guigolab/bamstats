@@ -97,11 +97,7 @@ func (s *MappedPairsStats) FilterInsertSizesPercent(threshold float64, percent b
 	if percent {
 		threshold = float64(s.Total) * (threshold / 100)
 	}
-	fmt.Printf("THRESHOLD: %v\n", threshold)
 	for k, v := range s.InsertSizes {
-		if k == 237 {
-			fmt.Printf("237: %v\n", v)
-		}
 		if float64(v) < threshold {
 			delete(s.InsertSizes, k)
 		}
