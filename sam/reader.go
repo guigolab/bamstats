@@ -17,7 +17,7 @@ type Reader struct {
 	Workers  int
 	Index    *bam.Index
 	Refs     []*sam.Reference
-	Channels []chan *Record
+	Channels []interface{}
 	cfg      *config.Config
 }
 
@@ -38,9 +38,13 @@ func NewReader(bamFile string, cfg *config.Config) (*Reader, error) {
 			workers = nRefs
 		}
 	}
-	chans := make([]chan *Record, workers)
+	chans := make([]interface{}, workers)
 	for i := 0; i < workers; i++ {
-		chans[i] = make(chan *Record, cfg.MaxBuf)
+		if index == nil {
+			chans[i] = make(chan *Record, cfg.MaxBuf)
+		} else {
+			chans[i] = make(chan *bam.Iterator, cfg.MaxBuf)
+		}
 	}
 	return &Reader{
 		r,
@@ -95,13 +99,14 @@ func (r *Reader) readRandom() error {
 				log.Debugf("%v: %v chunks", ref.Name(), len(refChunks))
 			}
 
-			r.readChunk(r.Channels[c%r.Workers], NewRefChunk(ref, refChunks))
+			ch := r.Channels[c%r.Workers].(chan *bam.Iterator)
+			r.readChunk(ch, NewRefChunk(ref, refChunks))
 
 			c++
 		}
 	}
 	for i := 0; i < r.Workers; i++ {
-		close(r.Channels[i])
+		close(r.Channels[i].(chan *bam.Iterator))
 	}
 	return nil
 }
@@ -117,11 +122,11 @@ func (r *Reader) readSeq() error {
 		if err != nil {
 			break
 		}
-		r.Channels[c%r.Workers] <- NewRecord(record)
+		r.Channels[c%r.Workers].(chan *Record) <- NewRecord(record)
 		c++
 	}
 	for i := 0; i < r.Workers; i++ {
-		close(r.Channels[i])
+		close(r.Channels[i].(chan *Record))
 	}
 	return nil
 }
@@ -134,7 +139,7 @@ func (r *Reader) Read() {
 	}
 }
 
-func (r *Reader) readChunk(records chan *Record, data *RefChunk) {
+func (r *Reader) readChunk(iterators chan *bam.Iterator, data *RefChunk) {
 	log.WithFields(log.Fields{
 		"Reference": data.Ref.Name(),
 		"Length":    data.Ref.Len(),
@@ -144,7 +149,7 @@ func (r *Reader) readChunk(records chan *Record, data *RefChunk) {
 		panic(err)
 	}
 	it, err := bam.NewIterator(br, data.Chunks)
-	defer it.Close()
+	// defer it.Close()
 	if err != nil {
 		if err != io.EOF {
 			log.Println(err)
@@ -152,9 +157,10 @@ func (r *Reader) readChunk(records chan *Record, data *RefChunk) {
 		it.Close()
 		panic(err)
 	}
-	for it.Next() {
-		records <- NewRecord(it.Record())
-	}
+	iterators <- it
+	// for it.Next() {
+	// 	records <- NewRecord(it.Record())
+	// }
 }
 
 func (r *Reader) Clone() *Reader {

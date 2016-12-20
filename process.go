@@ -8,6 +8,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/biogo/hts/bam"
 	"github.com/guigolab/bamstats/annotation"
 	"github.com/guigolab/bamstats/config"
 	"github.com/guigolab/bamstats/sam"
@@ -21,7 +22,7 @@ func init() {
 
 var wg sync.WaitGroup
 
-func worker(id int, in chan *sam.Record, out chan stats.StatsMap, index *annotation.RtreeMap, uniq bool) {
+func worker(id int, in interface{}, out chan stats.StatsMap, index *annotation.RtreeMap, uniq bool) {
 	defer wg.Done()
 	logger := log.WithFields(log.Fields{
 		"worker": id,
@@ -29,9 +30,23 @@ func worker(id int, in chan *sam.Record, out chan stats.StatsMap, index *annotat
 	logger.Debug("Starting")
 
 	sm := stats.NewStatsMap(true, (index != nil), uniq)
-	for record := range in {
-		for _, s := range sm {
-			s.Collect(record, index)
+
+	switch in.(type) {
+	case chan *sam.Record:
+		c := in.(chan *sam.Record)
+		for record := range c {
+			for _, s := range sm {
+				s.Collect(record, index)
+			}
+		}
+	case chan *bam.Iterator:
+		iterators := in.(chan *bam.Iterator)
+		for it := range iterators {
+			for it.Next() {
+				for _, s := range sm {
+					s.Collect(sam.NewRecord(it.Record()), index)
+				}
+			}
 		}
 	}
 	logger.Debug("Done")
