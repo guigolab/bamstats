@@ -10,11 +10,9 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/biogo/hts/bam"
-	"github.com/biogo/hts/bgzf"
 	bgzfidx "github.com/biogo/hts/bgzf/index"
-	"github.com/biogo/hts/sam"
 	"github.com/guigolab/bamstats/annotation"
-	bssam "github.com/guigolab/bamstats/sam"
+	"github.com/guigolab/bamstats/sam"
 	"github.com/guigolab/bamstats/stats"
 	"github.com/guigolab/bamstats/utils"
 )
@@ -23,14 +21,9 @@ func init() {
 	log.SetLevel(log.WarnLevel)
 }
 
-type IndexWorkerData struct {
-	Ref   *sam.Reference
-	Chunk bgzf.Chunk
-}
-
 var wg sync.WaitGroup
 
-func workerIndex(id int, fname string, in chan IndexWorkerData, out chan stats.StatsMap, index *annotation.RtreeMap, uniq bool) {
+func workerIndex(id int, fname string, in chan *sam.RefChunk, out chan stats.StatsMap, index *annotation.RtreeMap, uniq bool) {
 	defer wg.Done()
 	logger := log.WithFields(log.Fields{
 		"Worker": id,
@@ -52,7 +45,7 @@ func workerIndex(id int, fname string, in chan IndexWorkerData, out chan stats.S
 			"Reference": data.Ref.Name(),
 			"Length":    data.Ref.Len(),
 		}).Debugf("Reading reference")
-		it, err := bam.NewIterator(br, []bgzf.Chunk{data.Chunk})
+		it, err := bam.NewIterator(br, data.Chunks)
 		defer it.Close()
 		if err != nil {
 			if err != io.EOF {
@@ -63,7 +56,7 @@ func workerIndex(id int, fname string, in chan IndexWorkerData, out chan stats.S
 		}
 		for it.Next() {
 			for _, s := range sm {
-				s.Collect(bssam.NewRecord(it.Record()), index)
+				s.Collect(sam.NewRecord(it.Record()), index)
 			}
 		}
 	}
@@ -82,7 +75,7 @@ func worker(id int, in chan *sam.Record, out chan stats.StatsMap, index *annotat
 	sm := stats.NewStatsMap(true, (index != nil), uniq)
 	for record := range in {
 		for _, s := range sm {
-			s.Collect(bssam.NewRecord(record), index)
+			s.Collect(record, index)
 		}
 	}
 	logger.Debug("Done")
@@ -114,7 +107,7 @@ func readBAMWithIndex(bamFile string, index *annotation.RtreeMap, cpu int, maxBu
 	h := br.Header()
 	nRefs := len(h.Refs())
 	stats := make(chan stats.StatsMap, cpu)
-	chunks := make(chan IndexWorkerData, cpu)
+	chunks := make(chan *sam.RefChunk, cpu)
 	nWorkers := cpu
 	if cpu > nRefs {
 		log.WithFields(log.Fields{
@@ -139,7 +132,7 @@ func readBAMWithIndex(bamFile string, index *annotation.RtreeMap, cpu int, maxBu
 				log.Debugf("%v: %v chunks", ref.Name(), len(refChunks))
 			}
 			for _, chunk := range refChunks {
-				chunks <- IndexWorkerData{ref, chunk}
+				chunks <- sam.NewRefChunk(ref, chunk)
 			}
 		}
 	}
@@ -175,7 +168,7 @@ func readBAM(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, re
 		if err != nil {
 			break
 		}
-		input[c%cpu] <- record
+		input[c%cpu] <- sam.NewRecord(record)
 		c++
 	}
 	for i := 0; i < cpu; i++ {
