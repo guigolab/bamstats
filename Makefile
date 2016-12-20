@@ -29,7 +29,7 @@ $(BINARIES): $(CMD_DIR)/*.go *.go GoDeps/GoDeps.json
 	$(eval GOOS := $(word 2, $(TERMS)))
 	$(eval GOARCH := $(word 3, $(TERMS)))
 	@echo -n Building $(GOOS)-$(GOARCH)...
-	@cd $(CMD_DIR) && GOARCH=$(GOARCH) GOOS=$(GOOS) go build $(LDFLAGS) -o ../"$@"
+	@cd $(CMD_DIR) && GOARCH=$(GOARCH) GOOS=$(GOOS) go build $(LDFLAGS) -o ../../"$@"
 	@echo DONE
 
 $(COMPRESSED_BINARIES):
@@ -62,13 +62,13 @@ bench:
 	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof
 
 profile: cpu.prof
-	@go tool pprof bamstats.test cpu.prof
+	@go tool pprof bamstats.test $?
 
-install: $(CMD_DIR)/*.go *.go GoDeps/GoDeps.json
+install: $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
 	@cd $(CMD_DIR) && go install
 
 deploy: bin/linux/amd64/$(CMD)
-	@scp bin/linux/amd64/$(CMD) ant:~/bin/$(CMD)
+	@scp $? ant:~/bin/$(CMD)
 
 clean: 
 	@rm -rf bin/*
