@@ -43,7 +43,7 @@ func NewReader(bamFile string, cfg *config.Config) (*Reader, error) {
 		if index == nil {
 			chans[i] = make(chan *Record, cfg.MaxBuf)
 		} else {
-			chans[i] = make(chan *bam.Iterator, cfg.MaxBuf)
+			chans[i] = make(chan *Iterator, cfg.MaxBuf)
 		}
 	}
 	return &Reader{
@@ -85,30 +85,29 @@ func readIndex(bamFile string, br *bam.Reader, cpu int) *bam.Index {
 }
 
 func (r *Reader) readRandom() error {
+	var err error
 	c := 0
 	for _, ref := range r.Refs {
-		refChunks, err := r.Index.Chunks(ref, 0, ref.Len())
+		refChunks, err := r.Index.Chunks(ref, 1, ref.Len()-1)
 		if err != nil {
 			if err != io.EOF && err != index.ErrInvalid {
-				log.Error(err)
+				panic(err)
 			}
-			return err
+			continue
 		}
 		if len(refChunks) > 0 {
 			if len(refChunks) > 1 {
 				log.Debugf("%v: %v chunks", ref.Name(), len(refChunks))
 			}
-
-			ch := r.Channels[c%r.Workers].(chan *bam.Iterator)
-			r.readChunk(ch, NewRefChunk(ref, refChunks))
+			r.Channels[c%r.Workers].(chan *Iterator) <- r.readChunk(NewRefChunk(ref, refChunks))
 
 			c++
 		}
 	}
 	for i := 0; i < r.Workers; i++ {
-		close(r.Channels[i].(chan *bam.Iterator))
+		close(r.Channels[i].(chan *Iterator))
 	}
-	return nil
+	return err
 }
 
 func (r *Reader) readSeq() error {
@@ -122,8 +121,11 @@ func (r *Reader) readSeq() error {
 		if err != nil {
 			break
 		}
-		r.Channels[c%r.Workers].(chan *Record) <- NewRecord(record)
-		c++
+		rec := NewRecord(record)
+		r.Channels[c%r.Workers].(chan *Record) <- rec
+		if rec.IsPrimary() {
+			c++
+		}
 	}
 	for i := 0; i < r.Workers; i++ {
 		close(r.Channels[i].(chan *Record))
@@ -139,16 +141,26 @@ func (r *Reader) Read() {
 	}
 }
 
-func (r *Reader) readChunk(iterators chan *bam.Iterator, data *RefChunk) {
-	log.WithFields(log.Fields{
-		"Reference": data.Ref.Name(),
-		"Length":    data.Ref.Len(),
-	}).Debugf("Reading reference")
+func (r *Reader) readChunk(data *RefChunk) *Iterator {
 	br, err := NewBamReader(r.FileName, r.cfg)
 	if err != nil {
 		panic(err)
 	}
-	it, err := bam.NewIterator(br, data.Chunks)
+	reads := -1
+	if r.cfg.Reads > -1 {
+		reads = r.cfg.Reads / len(r.Refs)
+		rem := r.cfg.Reads % len(r.Refs)
+		if data.Ref.ID() == 0 {
+			reads += rem
+		}
+	}
+	log.WithFields(log.Fields{
+		"Reference": data.Ref.Name(),
+		"Length":    data.Ref.Len(),
+		"Refs":      len(r.Refs),
+		"Reads":     reads,
+	}).Debugf("Reading reference")
+	it, err := NewIterator(br, data, reads)
 	// defer it.Close()
 	if err != nil {
 		if err != io.EOF {
@@ -157,7 +169,7 @@ func (r *Reader) readChunk(iterators chan *bam.Iterator, data *RefChunk) {
 		it.Close()
 		panic(err)
 	}
-	iterators <- it
+	return it
 	// for it.Next() {
 	// 	records <- NewRecord(it.Record())
 	// }
