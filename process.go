@@ -8,7 +8,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/biogo/hts/bam"
 	"github.com/guigolab/bamstats/annotation"
 	"github.com/guigolab/bamstats/config"
 	"github.com/guigolab/bamstats/sam"
@@ -20,16 +19,16 @@ func init() {
 	log.SetLevel(log.WarnLevel)
 }
 
-var wg sync.WaitGroup
+// var wg sync.WaitGroup
 
-func worker(id int, in interface{}, out chan stats.StatsMap, index *annotation.RtreeMap, uniq bool) {
+func worker(id int, in interface{}, out chan stats.StatsMap, index *annotation.RtreeMap, cfg *config.Config, wg *sync.WaitGroup) {
 	defer wg.Done()
 	logger := log.WithFields(log.Fields{
 		"worker": id,
 	})
 	logger.Debug("Starting")
 
-	sm := stats.NewStatsMap(true, (index != nil), uniq)
+	sm := stats.NewStatsMap(true, (index != nil), cfg.Uniq)
 
 	switch in.(type) {
 	case chan *sam.Record:
@@ -39,12 +38,12 @@ func worker(id int, in interface{}, out chan stats.StatsMap, index *annotation.R
 				s.Collect(record, index)
 			}
 		}
-	case chan *bam.Iterator:
-		iterators := in.(chan *bam.Iterator)
+	case chan *sam.Iterator:
+		iterators := in.(chan *sam.Iterator)
 		for it := range iterators {
 			for it.Next() {
 				for _, s := range sm {
-					s.Collect(sam.NewRecord(it.Record()), index)
+					s.Collect(it.Record(), index)
 				}
 			}
 		}
@@ -55,6 +54,9 @@ func worker(id int, in interface{}, out chan stats.StatsMap, index *annotation.R
 }
 
 func process(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (chan stats.StatsMap, error) {
+
+	var wg sync.WaitGroup
+
 	conf := config.NewConfig(cpu, maxBuf, reads, uniq)
 
 	br, err := sam.NewReader(bamFile, conf)
@@ -66,17 +68,17 @@ func process(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, re
 	for i := 0; i < br.Workers; i++ {
 		id := i + 1
 		wg.Add(1)
-		go worker(id, br.Channels[i], st, index, uniq)
+		go worker(id, br.Channels[i], st, index, conf, &wg)
 	}
 
 	br.Read()
 
-	go waitProcess(st)
+	go waitProcess(st, &wg)
 
 	return st, nil
 }
 
-func waitProcess(st chan stats.StatsMap) {
+func waitProcess(st chan stats.StatsMap, wg *sync.WaitGroup) {
 	wg.Wait()
 	close(st)
 }
