@@ -53,7 +53,7 @@ func worker(id int, in interface{}, out chan stats.StatsMap, index *annotation.R
 	out <- sm
 }
 
-func process(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (chan stats.StatsMap, error) {
+func process(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (stats.StatsMap, error) {
 
 	var wg sync.WaitGroup
 
@@ -64,18 +64,25 @@ func process(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, re
 	if err != nil {
 		return nil, err
 	}
-	st := make(chan stats.StatsMap, cpu)
+	statChan := make(chan stats.StatsMap, cpu)
 	for i := 0; i < br.Workers; i++ {
 		id := i + 1
 		wg.Add(1)
-		go worker(id, br.Channels[i], st, index, conf, &wg)
+		go worker(id, br.Channels[i], statChan, index, conf, &wg)
 	}
 
 	br.Read()
 
-	go waitProcess(st, &wg)
+	go waitProcess(statChan, &wg)
+	stat := <-statChan
+	stat.Merge(statChan)
+	if v, ok := stat["general"]; ok {
+		s := v.(*stats.GeneralStats)
+		s.Reads.Total += br.Unmapped()
+		s.Finalize()
+	}
 
-	return st, nil
+	return stat, nil
 }
 
 func waitProcess(st chan stats.StatsMap, wg *sync.WaitGroup) {
@@ -98,10 +105,8 @@ func Process(bamFile string, anno string, cpu int, maxBuf int, reads int, uniq b
 	if err != nil {
 		return nil, err
 	}
-	st := <-stats
-	st.Merge(stats)
 	log.Infof("Stats done in %v", time.Since(start))
-	return st, nil
+	return stats, nil
 }
 
 func WriteOutput(output string, st stats.StatsMap) {
