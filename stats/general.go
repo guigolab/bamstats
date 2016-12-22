@@ -12,8 +12,8 @@ type MappedReadsStats struct {
 	Total       uint64 `json:"total,omitempty"`
 	Unmapped    uint64 `json:"unmapped,omitempty"`
 	Mapped      TagMap `json:"mapped,omitempty"`
-	PlusStrand  int    `json:"forward,omitempy"`
-	MinusStrand int    `json:"reverse,omitempy"`
+	PlusStrand  uint64 `json:"forward,omitempy"`
+	MinusStrand uint64 `json:"reverse,omitempy"`
 }
 
 // MappingsStats represents statistics for mappings
