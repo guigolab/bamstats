@@ -52,14 +52,15 @@ func (s *GeneralStats) Update(other Stats) {
 	if other, ok := other.(*GeneralStats); ok {
 		s.Reads.Update(other.Reads)
 		s.Pairs.Update(other.Pairs)
-		s.Pairs.UpdateUnmapped()
+		s.Pairs.MappedReadsStats.UpdateUnmapped()
 	}
 }
 
 // Finalize updates dependent counts of a Stats instance.
 func (s *GeneralStats) Finalize() {
+	s.Reads.MappedReadsStats.UpdateUnmapped()
+	s.Pairs.MappedReadsStats.UpdateUnmapped()
 	s.Reads.UpdateMappingsRatio()
-	s.Pairs.UpdateUnmapped()
 }
 
 // Update updates all counts from another MappedReadStats instance.
@@ -67,6 +68,11 @@ func (s *MappedReadsStats) Update(other MappedReadsStats) {
 	s.Total += other.Total
 	s.Unmapped += other.Unmapped
 	s.Mapped.Update(other.Mapped)
+}
+
+// UpdateUnmapped updates the count of unmapped pairs
+func (s *MappedReadsStats) UpdateUnmapped() {
+	s.Unmapped = s.Total - s.Mapped.Total()
 }
 
 // Update updates all counts from another MappingsStats instance.
@@ -89,11 +95,6 @@ func (s *MappedPairsStats) FilterInsertSizes(percent float64) {
 			delete(s.InsertSizes, k)
 		}
 	}
-}
-
-// UpdateUnmapped updates the count of unmapped pairs
-func (s *MappedPairsStats) UpdateUnmapped() {
-	s.Unmapped = s.Total - s.Mapped.Total()
 }
 
 // UpdateMappingsRatio updates ration of mappings vs total mapped reads.
