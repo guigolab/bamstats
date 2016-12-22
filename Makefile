@@ -1,4 +1,4 @@
-.PHONY: build compress prepareRelase release bench profile deploy clean deepclean
+.PHONY: build compress prepareDev dev prepareRelase release bench profile deploy clean deepclean
 SHELL := /bin/bash
 
 CMD_DIR=cmd/bamstats
@@ -17,18 +17,20 @@ ENVS := \
 BINARIES := $(ENVS:%=bin/%/$(CMD))
 COMPRESSED_BINARIES := $(BINARIES:=.tar.bz2)
 
-build: $(BINARIES) bin/$(CMD)
+build: $(BINARIES)
 
 compress: build $(COMPRESSED_BINARIES)
+
+prepareDev: 
+	$(eval COMMIT := $(shell git rev-parse --short HEAD))
+	$(eval LDFLAGS := -ldflags "-X github.com/guigolab/bamstats.GitCommit=$(COMMIT)")
+
+dev: prepareDev build
 
 $(ENVS):
 	@$(MAKE) bin/"$@"/$(CMD)
 
-prepareBuild: 
-	$(eval COMMIT := $(shell git rev-parse --short HEAD))
-	$(eval LDFLAGS := -ldflags "-X github.com/guigolab/bamstats.GitCommit=$(COMMIT)")
-
-$(BINARIES): prepareBuild $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
+$(BINARIES): $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
 	$(eval TERMS := $(subst /, ,"$@"))
 	$(eval GOOS := $(word 2, $(TERMS)))
 	$(eval GOARCH := $(word 3, $(TERMS)))
@@ -54,13 +56,12 @@ prepareRelease:
 	$(eval PRE := -p)
 
 release: prepareRelease compress
+
+pushRelease: release
 	$(eval VER := $(shell bin/bamstats --version | cut -d' ' -f3 | sed 's/^/v/'))
 	@[[ $(VER) == $(TAG) ]] && git push && git push --tags || echo "Wrong release version"
 	@[[ $(VER) == $(TAG) ]] && (github-release release -t $(TAG) $(PRE) -d "$(DESC)" || true) || true
 	@[[ $(VER) == $(TAG) ]]	&& $(MAKE) $(COMPRESSED_BINARIES:%=upload-%) || true
-
-bin/$(CMD): bin/$(OS)/$(ARCH)/$(CMD)
-	@ln -fs $$PWD/bin/$(OS)/$(ARCH)/$(CMD) bin/$(CMD)
 
 bench:
 	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof
@@ -68,11 +69,12 @@ bench:
 profile: cpu.prof
 	@go tool pprof bamstats.test $?
 
-install: prepareBuild $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
+install: prepareDev $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
 	@go install $(LDFLAGS) ./$(CMD_DIR)
 
-deploy: bin/linux/amd64/$(CMD)
-	@scp $? ant:~/bin/$(CMD)
+ant: prepareDev bin/linux/amd64/$(CMD)
+	$(eval BIN := $(word 2, $?))
+	@scp $(BIN) ant:~/bin/$(CMD)
 
 clean: 
 	@rm -rf bin/*
