@@ -7,12 +7,12 @@ import (
 
 // ElementStats represents mappings statistics for genomic elements
 type ElementStats struct {
-	ExonIntron int `json:"exonic_intronic"`
-	Intron     int `json:"intron"`
-	Exon       int `json:"exon"`
-	Intergenic int `json:"intergenic"`
-	Other      int `json:"others"`
-	Total      int `json:"total"`
+	ExonIntron uint64 `json:"exonic_intronic"`
+	Intron     uint64 `json:"intron"`
+	Exon       uint64 `json:"exon"`
+	Intergenic uint64 `json:"intergenic"`
+	Other      uint64 `json:"others"`
+	Total      uint64 `json:"total"`
 }
 
 // CoverageStats represents genome coverage statistics for continuos, split and total mapped reads.

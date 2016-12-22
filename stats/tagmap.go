@@ -9,7 +9,7 @@ import (
 )
 
 // TagMap represents a map of sam tags with integer keys
-type TagMap map[int]int
+type TagMap map[int]uint64
 
 // Update updates all counts from another TagMap instance.
 func (tm TagMap) Update(other TagMap) {
@@ -24,7 +24,7 @@ func (tm TagMap) Update(other TagMap) {
 }
 
 // Total returns the total number of reads in the TagMap
-func (tm TagMap) Total() (sum int) {
+func (tm TagMap) Total() (sum uint64) {
 	for _, v := range tm {
 		sum += v
 	}
@@ -54,7 +54,7 @@ func (tm TagMap) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON parse a JSON representation of a TagMap.
 func (tm *TagMap) UnmarshalJSON(b []byte) (err error) {
-	smap, imap := make(map[string]int), TagMap{}
+	smap, imap := make(map[string]uint64), TagMap{}
 	if err = json.Unmarshal(b, &smap); err == nil {
 		for key, value := range smap {
 			// JSON objects have string key - need to convert to int

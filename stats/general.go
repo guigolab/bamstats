@@ -9,8 +9,8 @@ import (
 
 // MappedReadsStats represents statistics for mapped reads
 type MappedReadsStats struct {
-	Total    int    `json:"total,omitempty"`
-	Unmapped int    `json:"unmapped,omitempty"`
+	Total    uint64 `json:"total,omitempty"`
+	Unmapped uint64 `json:"unmapped,omitempty"`
 	Mapped   TagMap `json:"mapped,omitempty"`
 }
 
@@ -29,7 +29,7 @@ type MappedPairsStats struct {
 // MultimapStats represents statistics for multi-maps
 type MultimapStats struct {
 	Ratio float64 `json:"ratio"`
-	Count int     `json:"count"`
+	Count uint64  `json:"count"`
 }
 
 // GeneralStats represents general mapping statistics
@@ -102,7 +102,7 @@ func (s *MappingsStats) UpdateMappingsRatio() {
 }
 
 // Unique returns the number of uniquely mapped reads.
-func (s *MappedReadsStats) Unique() int {
+func (s *MappedReadsStats) Unique() uint64 {
 	return s.Mapped[1]
 }
 
