@@ -24,15 +24,19 @@ compress: build $(COMPRESSED_BINARIES)
 $(ENVS):
 	@$(MAKE) bin/"$@"/$(CMD)
 
-$(BINARIES): $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
+prepareBuild: 
+	$(eval COMMIT := $(shell git rev-parse --short HEAD))
+	$(eval LDFLAGS := -ldflags "-X github.com/guigolab/bamstats.GitCommit=$(COMMIT)")
+
+$(BINARIES): prepareBuild $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
 	$(eval TERMS := $(subst /, ,"$@"))
 	$(eval GOOS := $(word 2, $(TERMS)))
 	$(eval GOARCH := $(word 3, $(TERMS)))
 	@echo -n Building $(GOOS)-$(GOARCH)...
-	@cd $(CMD_DIR) && GOARCH=$(GOARCH) GOOS=$(GOOS) go build $(LDFLAGS) -o ../../"$@"
+	@GOARCH=$(GOARCH) GOOS=$(GOOS) go build $(LDFLAGS) -o "$@" ./$(CMD_DIR)
 	@echo DONE
 
-$(COMPRESSED_BINARIES):
+$(COMPRESSED_BINARIES): $(BINARIES)
 	$(eval BINARY := $(subst .tar.bz2,,"$@"))
 	@echo -n Compressing $(BINARY)...
 	@tar -jcf "$@" $(BINARY)
@@ -46,7 +50,7 @@ $(COMPRESSED_BINARIES:%=upload-%): upload-%: prepareRelease
 prepareRelease: 
 	$(eval TAG := $(shell git describe --abbrev=0 --tags))
 	$(eval DESC := $(shell git cat-file -p  $(shell git rev-parse $(TAG)) | tail -n+6))
-	$(eval LDFLAGS := -ldflags "-X github.com/bamstats.PreVersionString=")
+	$(eval LDFLAGS := -ldflags "-X github.com/guigolab/bamstats.PreVersionString=")
 	$(eval PRE := -p)
 
 release: prepareRelease compress
@@ -56,7 +60,7 @@ release: prepareRelease compress
 	@[[ $(VER) == $(TAG) ]]	&& $(MAKE) $(COMPRESSED_BINARIES:%=upload-%) || true
 
 bin/$(CMD): bin/$(OS)/$(ARCH)/$(CMD)
-	@ln -s $$PWD/bin/$(OS)/$(ARCH)/$(CMD) bin/$(CMD)
+	@ln -fs $$PWD/bin/$(OS)/$(ARCH)/$(CMD) bin/$(CMD)
 
 bench:
 	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof
@@ -64,8 +68,8 @@ bench:
 profile: cpu.prof
 	@go tool pprof bamstats.test $?
 
-install: $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
-	@cd $(CMD_DIR) && go install
+install: prepareBuild $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
+	@go install $(LDFLAGS) ./$(CMD_DIR)
 
 deploy: bin/linux/amd64/$(CMD)
 	@scp $? ant:~/bin/$(CMD)
