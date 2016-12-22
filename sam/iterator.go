@@ -5,7 +5,7 @@ import "github.com/biogo/hts/bam"
 type Iterator struct {
 	*bam.Iterator
 	MaxReads, Reads int
-	Chr             string
+	chr             string
 }
 
 func NewIterator(br *bam.Reader, data *RefChunk, reads int) (*Iterator, error) {
@@ -17,15 +17,20 @@ func NewIterator(br *bam.Reader, data *RefChunk, reads int) (*Iterator, error) {
 }
 
 func (i *Iterator) Next() bool {
-	next := i.Iterator.Next()
 	cont := true
-	if next && (i.MaxReads >= 0) {
+	for i.Iterator.Next() {
+		if i.chr != i.Record().Ref.Name() {
+			continue
+		}
+		if i.MaxReads >= 0 {
+			cont = (i.Reads < i.MaxReads)
+		}
 		if i.Record().IsPrimary() {
 			i.Reads++
 		}
-		cont = (i.Reads < i.MaxReads)
+		return cont
 	}
-	return next && cont
+	return false
 }
 
 func (i *Iterator) Record() *Record {
