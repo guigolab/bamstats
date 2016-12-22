@@ -6,7 +6,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/biogo/hts/bam"
-	"github.com/biogo/hts/bgzf/index"
+	"github.com/biogo/hts/bgzf"
 	"github.com/biogo/hts/sam"
 	"github.com/guigolab/bamstats/config"
 )
@@ -19,6 +19,7 @@ type Reader struct {
 	Refs     []*sam.Reference
 	Channels []interface{}
 	cfg      *config.Config
+	unmapped uint64
 }
 
 func NewReader(bamFile string, cfg *config.Config) (*Reader, error) {
@@ -27,10 +28,10 @@ func NewReader(bamFile string, cfg *config.Config) (*Reader, error) {
 		return nil, err
 	}
 	h := r.Header()
-	index := readIndex(bamFile, r, cfg.Cpu)
+	index, unmapped := readIndex(bamFile, r, cfg.Cpu)
 	workers := cfg.Cpu
 	if index != nil {
-		nRefs := len(h.Refs())
+		nRefs := index.NumRefs()
 		if cfg.Cpu > nRefs {
 			log.WithFields(log.Fields{
 				"References": nRefs,
@@ -54,6 +55,7 @@ func NewReader(bamFile string, cfg *config.Config) (*Reader, error) {
 		h.Refs(),
 		chans,
 		cfg,
+		unmapped,
 	}, nil
 }
 
@@ -66,7 +68,7 @@ func NewBamReader(bamFile string, cfg *config.Config) (*bam.Reader, error) {
 	return r, err
 }
 
-func readIndex(bamFile string, br *bam.Reader, cpu int) *bam.Index {
+func readIndex(bamFile string, br *bam.Reader, cpu int) (*bam.Index, uint64) {
 	if _, err := os.Stat(bamFile + ".bai"); err == nil && cpu > 1 {
 		log.Infof("Opening BAM index %s", bamFile+".bai")
 		i, err := os.Open(bamFile + ".bai")
@@ -78,31 +80,26 @@ func readIndex(bamFile string, br *bam.Reader, cpu int) *bam.Index {
 		if err != nil {
 			panic(err)
 		}
-		return bai
+		unmapped, _ := bai.Unmapped()
+		return bai, unmapped
 	} else {
-		return nil
+		return nil, 0
 	}
 }
 
-func (r *Reader) readRandom() error {
+func (r *Reader) readChromosomes() error {
 	var err error
 	c := 0
 	for _, ref := range r.Refs {
-		refChunks, err := r.Index.Chunks(ref, 1, ref.Len()-1)
-		if err != nil {
-			if err != io.EOF && err != index.ErrInvalid {
-				panic(err)
-			}
+		refStats, ok := r.Index.ReferenceStats(ref.ID())
+		if !ok {
 			continue
 		}
-		if len(refChunks) > 0 {
-			if len(refChunks) > 1 {
-				log.Debugf("%v: %v chunks", ref.Name(), len(refChunks))
-			}
-			r.Channels[c%r.Workers].(chan *Iterator) <- r.readChunk(NewRefChunk(ref, refChunks))
+		refChunks := refStats.Chunk
 
-			c++
-		}
+		r.Channels[c%r.Workers].(chan *Iterator) <- r.readChunk(NewRefChunk(ref, []bgzf.Chunk{refChunks}))
+
+		c++
 	}
 	for i := 0; i < r.Workers; i++ {
 		close(r.Channels[i].(chan *Iterator))
@@ -110,7 +107,7 @@ func (r *Reader) readRandom() error {
 	return err
 }
 
-func (r *Reader) readSeq() error {
+func (r *Reader) scan() error {
 	c := 0
 	reads := r.cfg.Reads
 	for {
@@ -122,6 +119,10 @@ func (r *Reader) readSeq() error {
 			break
 		}
 		rec := NewRecord(record)
+		if rec.IsUnmapped() {
+			r.unmapped++
+			continue
+		}
 		r.Channels[c%r.Workers].(chan *Record) <- rec
 		if rec.IsPrimary() {
 			c++
@@ -135,9 +136,9 @@ func (r *Reader) readSeq() error {
 
 func (r *Reader) Read() {
 	if r.Index == nil {
-		r.readSeq()
+		r.scan()
 	} else {
-		r.readRandom()
+		r.readChromosomes()
 	}
 }
 
@@ -154,14 +155,16 @@ func (r *Reader) readChunk(data *RefChunk) *Iterator {
 			reads += rem
 		}
 	}
+	count, _ := r.Index.ReferenceStats(data.Ref.ID())
 	log.WithFields(log.Fields{
 		"Reference": data.Ref.Name(),
 		"Length":    data.Ref.Len(),
 		"Refs":      len(r.Refs),
 		"Reads":     reads,
+		"Mapped":    count.Mapped,
+		"Unmapped":  count.Unmapped,
 	}).Debugf("Reading reference")
 	it, err := NewIterator(br, data, reads)
-	// defer it.Close()
 	if err != nil {
 		if err != io.EOF {
 			log.Println(err)
@@ -170,9 +173,6 @@ func (r *Reader) readChunk(data *RefChunk) *Iterator {
 		panic(err)
 	}
 	return it
-	// for it.Next() {
-	// 	records <- NewRecord(it.Record())
-	// }
 }
 
 func (r *Reader) Clone() *Reader {
@@ -181,4 +181,8 @@ func (r *Reader) Clone() *Reader {
 		panic(err)
 	}
 	return reader
+}
+
+func (r *Reader) Unmapped() uint64 {
+	return r.unmapped
 }
