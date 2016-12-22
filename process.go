@@ -2,8 +2,6 @@
 package bamstats
 
 import (
-	// "io"
-	// "os"
 	"sync"
 	"time"
 
@@ -30,6 +28,14 @@ func worker(id int, in interface{}, out chan stats.StatsMap, index *annotation.R
 
 	sm := stats.NewStatsMap(true, (index != nil), cfg.Uniq)
 
+	collectStats(in, sm, index)
+
+	logger.Debug("Done")
+
+	out <- sm
+}
+
+func collectStats(in interface{}, sm stats.StatsMap, index *annotation.RtreeMap) {
 	switch in.(type) {
 	case chan *sam.Record:
 		c := in.(chan *sam.Record)
@@ -48,9 +54,6 @@ func worker(id int, in interface{}, out chan stats.StatsMap, index *annotation.R
 			}
 		}
 	}
-	logger.Debug("Done")
-
-	out <- sm
 }
 
 func process(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, reads int, uniq bool) (stats.StatsMap, error) {
