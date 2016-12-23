@@ -106,8 +106,10 @@ func (s *MappedPairsStats) FilterInsertSizesPercent(threshold float64, percent b
 
 func (s *MappedPairsStats) FilterInsertSizesLength(minLength, maxLength int) {
 	for k := range s.InsertSizes {
-		if k < minLength || k > maxLength {
-			delete(s.InsertSizes, k)
+		if i, ok := k.(int); ok {
+			if i < minLength || i > maxLength {
+				delete(s.InsertSizes, k)
+			}
 		}
 	}
 }

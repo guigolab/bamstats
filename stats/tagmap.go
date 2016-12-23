@@ -9,7 +9,7 @@ import (
 )
 
 // TagMap represents a map of sam tags with integer keys
-type TagMap map[int]uint64
+type TagMap map[interface{}]uint64
 
 // Update updates all counts from another TagMap instance.
 func (tm TagMap) Update(other TagMap) {
@@ -35,13 +35,8 @@ func (tm TagMap) Total() (sum uint64) {
 func (tm TagMap) MarshalJSON() ([]byte, error) {
 	buf := &bytes.Buffer{}
 	buf.Write([]byte{'{', '\n'})
-	var keys []int
-	for k := range tm {
-		keys = append(keys, k)
-	}
-	sort.Ints(keys)
-	l := len(keys)
-	for i, k := range keys {
+	l := len(tm)
+	for i, k := range tm.SortedKeys().([]interface{}) {
 		fmt.Fprintf(buf, "\t\"%d\": %v", k, tm[k])
 		if i < l-1 {
 			buf.WriteByte(',')
@@ -50,6 +45,39 @@ func (tm TagMap) MarshalJSON() ([]byte, error) {
 	}
 	buf.Write([]byte{'}', '\n'})
 	return buf.Bytes(), nil
+}
+
+func (tm TagMap) SortedKeys() interface{} {
+	l := len(tm)
+	keys := make([]interface{}, l)
+	i := 0
+	for k := range tm {
+		keys[i] = k
+		break
+	}
+	switch keys[0].(type) {
+	case int:
+		convKeys := make([]int, l)
+		for k := range tm {
+			convKeys[i] = k.(int)
+			i++
+		}
+		sort.Ints(convKeys)
+		for j, k := range convKeys {
+			keys[j] = k
+		}
+	case string:
+		convKeys := make([]string, l)
+		for k := range tm {
+			convKeys[i] = k.(string)
+			i++
+		}
+		sort.Strings(convKeys)
+		for j, k := range convKeys {
+			keys[j] = k
+		}
+	}
+	return keys
 }
 
 // UnmarshalJSON parse a JSON representation of a TagMap.
