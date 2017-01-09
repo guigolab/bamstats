@@ -11,18 +11,18 @@ type Location struct {
 	start, end float64
 }
 
-func (s Location) Chrom() string {
-	return s.chrom
-}
-func (s Location) Start() float64 {
-	return s.start
-}
-func (s Location) End() float64 {
-	return s.end
-}
-
 func NewLocation(chrom string, start, end float64) *Location {
 	return &Location{chrom, start, end}
+}
+
+func (s *Location) Chrom() string {
+	return s.chrom
+}
+func (s *Location) Start() float64 {
+	return s.start
+}
+func (s *Location) End() float64 {
+	return s.end
 }
 
 func (loc *Location) GetElements(buf *[]rtreego.Spatial, elems map[string]uint8) {
