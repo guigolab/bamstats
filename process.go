@@ -79,10 +79,12 @@ func process(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, re
 	go waitProcess(statChan, &wg)
 	stat := <-statChan
 	stat.Merge(statChan)
-	if v, ok := stat["general"]; ok {
-		s := v.(*stats.GeneralStats)
-		s.Reads.Total += br.Unmapped()
-		s.Finalize()
+	for k, v := range stat {
+		v.Finalize()
+		if k == "general" {
+			s := v.(*stats.GeneralStats)
+			s.Reads.Total += br.Unmapped()
+		}
 	}
 
 	return stat, nil
