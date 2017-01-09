@@ -1,4 +1,4 @@
-.PHONY: build compress prepareDev dev prepareRelase release bench profile deploy clean deepclean
+.PHONY: build compress prepareDev dev prepareRelase release test bench profile deploy clean deepclean
 SHELL := /bin/bash
 
 CMD_DIR=cmd/bamstats
@@ -62,6 +62,14 @@ pushRelease: release
 	@[[ $(VER) == $(TAG) ]] && git push && git push --tags || echo "Wrong release version"
 	@[[ $(VER) == $(TAG) ]] && (github-release release -t $(TAG) $(PRE) -d "$(DESC)" || true) || true
 	@[[ $(VER) == $(TAG) ]]	&& $(MAKE) $(COMPRESSED_BINARIES:%=upload-%) || true
+
+test:
+	@go test -cpu=1,2 ./annotation 
+	@go test -cpu=1,2 ./config 
+	@go test -cpu=1,2 ./sam 
+	@go test -cpu=1,2 ./stats 
+	@go test -cpu=1,2 ./utils 
+	@go test -cpu=1,2 .
 
 bench:
 	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof
