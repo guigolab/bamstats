@@ -66,8 +66,8 @@ func (r *Record) IsFirstOfValidPair() bool {
 	return r.IsPaired() && r.IsRead1() && r.IsProperlyPaired() && !r.HasMateUnmapped()
 }
 
-func (r *Record) GetBlocks() []annotation.Location {
-	blocks := make([]annotation.Location, 0, 10)
+func (r *Record) GetBlocks() []*annotation.Location {
+	blocks := make([]*annotation.Location, 0, 10)
 	ref := r.Ref.Name()
 	start := r.Pos
 	end := r.Pos
@@ -75,7 +75,7 @@ func (r *Record) GetBlocks() []annotation.Location {
 	for _, co := range r.Cigar {
 		coType := co.Type()
 		if coType == sam.CigarSkipped {
-			blocks = append(blocks, *annotation.NewLocation(ref, float64(start), float64(end)))
+			blocks = append(blocks, annotation.NewLocation(ref, float64(start), float64(end)))
 			start = end + co.Len()
 			end = start
 			continue
@@ -86,6 +86,6 @@ func (r *Record) GetBlocks() []annotation.Location {
 			end = utils.Max(end, start)
 		}
 	}
-	blocks = append(blocks, *annotation.NewLocation(ref, float64(start), float64(end)))
+	blocks = append(blocks, annotation.NewLocation(ref, float64(start), float64(end)))
 	return blocks
 }

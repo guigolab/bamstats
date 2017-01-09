@@ -2,11 +2,12 @@ package bamstats
 
 import (
 	"bytes"
-	. "github.com/guigolab/bamstats/stats"
-	. "github.com/guigolab/bamstats/utils"
 	"os"
 	"runtime"
 	"testing"
+
+	. "github.com/guigolab/bamstats/stats"
+	. "github.com/guigolab/bamstats/utils"
 )
 
 func checkTest(err error, t *testing.T) {
@@ -49,7 +50,7 @@ func TestGeneral(t *testing.T) {
 	OutputJSON(&b, out)
 	stats := readExpected(expectedGeneralJSON, t)
 	if len(b.Bytes()) != len(stats) {
-		t.Error("(Proces) GeneralStats are different")
+		t.Error("(Process) GeneralStats are different")
 	}
 }
 
@@ -72,7 +73,7 @@ func TestCoverage(t *testing.T) {
 	OutputJSON(&b, out)
 	stats := readExpected(expectedCoverageJSON, t)
 	if len(b.Bytes()) != len(stats) {
-		t.Error("(Proces) CoverageStats are different")
+		t.Error("(Process) CoverageStats are different")
 	}
 }
 
@@ -95,7 +96,7 @@ func TestCoverageUniq(t *testing.T) {
 	OutputJSON(&b, out)
 	stats := readExpected(expectedCoverageUniqJSON, t)
 	if len(b.Bytes()) != len(stats) {
-		t.Error("(Proces) CoverageStats are different")
+		t.Error("(Process) CoverageStats are different")
 	}
 }
 

@@ -83,10 +83,10 @@ chr1	30975	31109	exon
 `)
 	index := createIndex(bufio.NewScanner(bytes.NewReader(elements)), 1)
 	for _, item := range []struct {
-		query          location
+		query          Location
 		expectedLength int
 	}{
-		{location{"chr1", 17145, 17234}, 3},
+		{Location{"chr1", 17145, 17234}, 3},
 	} {
 		results := QueryIndex(index.Get(item.query.Chrom()), item.query.Start(), item.query.End())
 
