@@ -12,8 +12,8 @@ type MappedReadsStats struct {
 	Total       uint64 `json:"total,omitempty"`
 	Unmapped    uint64 `json:"unmapped,omitempty"`
 	Mapped      TagMap `json:"mapped,omitempty"`
-	PlusStrand  uint64 `json:"forward,omitempy"`
-	MinusStrand uint64 `json:"reverse,omitempy"`
+	PlusStrand  uint64 `json:"forward,omitempty"`
+	MinusStrand uint64 `json:"reverse,omitempty"`
 }
 
 // MappingsStats represents statistics for mappings
@@ -168,11 +168,6 @@ func (s *GeneralStats) Collect(r *sam.Record, index *annotation.RtreeMap) {
 			s.Pairs.Mapped[NHKey]++
 			isLen := int(math.Abs(float64(r.TempLen)))
 			s.Pairs.InsertSizes[isLen]++
-			if r.IsReverse() {
-				s.Pairs.MappedReadsStats.MinusStrand++
-			} else {
-				s.Pairs.MappedReadsStats.PlusStrand++
-			}
 		}
 		if r.IsReverse() {
 			s.Reads.MappedReadsStats.MinusStrand++
