@@ -36,9 +36,16 @@ func NewStatsMap(general, coverage, uniq bool) StatsMap {
 		m["coverage"] = NewCoverageStats()
 	}
 	if uniq {
-		cs := NewCoverageStats()
-		cs.uniq = true
-		m["coverageUniq"] = cs
+		if general {
+			gs := NewGeneralStats()
+			gs.uniq = true
+			m["generalUniq"] = gs
+		}
+		if coverage {
+			cs := NewCoverageStats()
+			cs.uniq = true
+			m["coverageUniq"] = cs
+		}
 	}
 	return m
 }

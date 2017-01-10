@@ -38,6 +38,7 @@ type MultimapStats struct {
 type GeneralStats struct {
 	Reads MappingsStats    `json:"reads,omitempty"`
 	Pairs MappedPairsStats `json:"pairs,omitempty"`
+	uniq  bool
 }
 
 // Merge updates counts from a channel of Stats instances.
@@ -149,6 +150,9 @@ func NewMappedPairsStats() *MappedPairsStats {
 
 // Collect collects general mapping statistics from a sam.Record.
 func (s *GeneralStats) Collect(r *sam.Record, index *annotation.RtreeMap) {
+	if s.uniq && !r.IsUniq() {
+		return
+	}
 	NH, hasNH := r.Tag([]byte("NH"))
 	if !hasNH {
 		NH, _ = sam.ParseAux([]byte("NH:i:0"))
