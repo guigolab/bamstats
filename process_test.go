@@ -107,8 +107,8 @@ func TestCoverageUniq(t *testing.T) {
 		out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, true)
 		checkTest(err, t)
 		l := len(out)
-		if l > 3 {
-			t.Errorf("(Process) Expected StatsMap of length 3, got %d", l)
+		if l > 4 {
+			t.Errorf("(Process) Expected StatsMap of length 4, got %d", l)
 		}
 		_, ok := out["general"].(*GeneralStats)
 		if !ok {
