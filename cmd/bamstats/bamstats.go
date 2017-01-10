@@ -1,10 +1,11 @@
 package main
 
 import (
+	"runtime"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/guigolab/bamstats"
 	"github.com/spf13/cobra"
-	"runtime"
 )
 
 var (
@@ -46,7 +47,7 @@ func setBamstatsFlags(c *cobra.Command) {
 	c.PersistentFlags().IntVarP(&cpu, "cpu", "c", 1, "number of cpus to be used")
 	c.PersistentFlags().IntVarP(&maxBuf, "max-buf", "", 1000000, "maximum number of buffered records")
 	c.PersistentFlags().IntVarP(&reads, "reads", "n", -1, "number of records to process")
-	c.PersistentFlags().BoolVarP(&uniq, "uniq", "u", false, "output genomic coverage statistics for uniqely mapped reads too")
+	c.PersistentFlags().BoolVarP(&uniq, "uniq", "u", false, "output statistics for uniqely mapped reads too")
 	c.PersistentFlags().Bool("version", false, "show version and exit")
 }
 
