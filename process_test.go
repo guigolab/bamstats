@@ -19,6 +19,7 @@ func checkTest(err error, t *testing.T) {
 var (
 	bamFile                  = "data/process-test.bam"
 	expectedGeneralJSON      = "data/expected-general.json"
+	expectedGeneralUniqJSON  = "data/expected-general-uniq.json"
 	expectedCoverageJSON     = "data/expected-coverage.json"
 	expectedCoverageUniqJSON = "data/expected-coverage-uniq.json"
 	annotationFiles          = []string{"data/coverage-test.bed", "data/coverage-test.gtf.gz"}
@@ -49,6 +50,25 @@ func TestGeneral(t *testing.T) {
 	}
 	OutputJSON(&b, out)
 	stats := readExpected(expectedGeneralJSON, t)
+	if len(b.Bytes()) != len(stats) {
+		t.Error("(Process) GeneralStats are different")
+	}
+}
+
+func TestGeneralUniq(t *testing.T) {
+	var b bytes.Buffer
+	out, err := Process(bamFile, "", runtime.GOMAXPROCS(-1), maxBuf, reads, true)
+	checkTest(err, t)
+	l := len(out)
+	if l > 2 {
+		t.Errorf("(Process) Expected StatsMap of length 2, got %d", l)
+	}
+	_, ok := out["general"].(*GeneralStats)
+	if !ok {
+		t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
+	}
+	OutputJSON(&b, out)
+	stats := readExpected(expectedGeneralUniqJSON, t)
 	if len(b.Bytes()) != len(stats) {
 		t.Error("(Process) GeneralStats are different")
 	}
