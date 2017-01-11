@@ -45,7 +45,7 @@ func (f *Feature) Bounds() *rtreego.Rect {
 	return f.location
 }
 
-// Get returns the pointer to an Rtree for the specified chromosome.
+// Get returns the pointer to an Rtree for the specified chromosome and create a new Rtree if not present.
 func (t RtreeMap) Get(chr string) *rtreego.Rtree {
 	if _, ok := t[chr]; !ok {
 		t[chr] = rtreego.NewTree(2, 25, 50)
