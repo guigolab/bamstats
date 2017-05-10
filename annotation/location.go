@@ -33,8 +33,8 @@ func (loc *Location) GetElements(buf *[]rtreego.Spatial, elems map[string]uint8)
 			if end <= start {
 				continue
 			}
-			if feature.Element != "gene" {
-				elems[feature.Element]++
+			if feature.Element() != "gene" {
+				elems[feature.Element()]++
 			}
 		}
 	}
