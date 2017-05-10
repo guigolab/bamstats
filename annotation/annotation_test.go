@@ -1,11 +1,12 @@
 package annotation
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"regexp"
 	"testing"
+
+	"github.com/dhconnelly/rtreego"
 )
 
 func TestCreateIndex(t *testing.T) {
@@ -26,7 +27,7 @@ chr14	29533	30039	exon
 chr15	30266	30667	exon
 chr16	30975	31109	exon
 `)
-	index := createIndex(bufio.NewScanner(bytes.NewReader(elements)), 1)
+	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), 1)
 	l := len(*index)
 	if l != 16 {
 		t.Errorf("(createIndex) expected length 15, got %v", l)
@@ -81,7 +82,7 @@ chr1	30266	30667	exon
 chr1	30667	30975	intron
 chr1	30975	31109	exon
 `)
-	index := createIndex(bufio.NewScanner(bytes.NewReader(elements)), 1)
+	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), 1)
 	for _, item := range []struct {
 		query          Location
 		expectedLength int
@@ -93,6 +94,97 @@ chr1	30975	31109	exon
 		l := len(results)
 		if l != item.expectedLength {
 			t.Errorf("(QueryIndex) expected %v, got %v results", item.expectedLength, l)
+		}
+	}
+}
+
+func newRect(point rtreego.Point, size []float64, t *testing.T) *rtreego.Rect {
+	rect, err := rtreego.NewRect(point, size)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rect
+}
+
+func TestMergeIntervals(t *testing.T) {
+	chr := []byte("chr1")
+	element := []byte("exon")
+	elements := []*Feature{
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{11869, 11869}, []float64{358, 358}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12010, 12010}, []float64{47, 47}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12179, 12179}, []float64{48, 48}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12613, 12613}, []float64{84, 84}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12613, 12613}, []float64{108, 108}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12975, 12975}, []float64{77, 77}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{13221, 13221}, []float64{153, 153}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{13221, 13221}, []float64{1188, 1188}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{13453, 13453}, []float64{217, 217}, t),
+		},
+	}
+	expected := []*Feature{
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{11869, 11869}, []float64{358, 358}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12613, 12613}, []float64{108, 108}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12975, 12975}, []float64{77, 77}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{13221, 13221}, []float64{1188, 1188}, t),
+		},
+	}
+	results := mergeIntervals(elements)
+	if len(results) != len(expected) {
+		t.Errorf("(MergeElements) Lengths of merged results differ from expected results.\ngot: %v \nexp: %v)", len(results), len(expected))
+	}
+	for i, e := range expected {
+		if e.String() != results[i].String() {
+			t.Errorf("(MergeElements) merged results error.\ngot: %v \nexp: %v", results[i], e)
 		}
 	}
 }

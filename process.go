@@ -101,7 +101,7 @@ func Process(bamFile string, anno string, cpu int, maxBuf int, reads int, uniq b
 	if anno != "" {
 		log.Infof("Creating index for %s", anno)
 		start := time.Now()
-		index = annotation.CreateIndex(anno, cpu)
+		index = annotation.CreateIndex(anno, bamFile, cpu)
 		log.Infof("Index done in %v", time.Since(start))
 	}
 	start := time.Now()

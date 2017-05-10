@@ -2,48 +2,20 @@ package annotation
 
 import (
 	"bufio"
-	"compress/bzip2"
-	"compress/gzip"
-	"io"
-	"log"
 	"os"
-	"path"
-	"strconv"
-	"strings"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/biogo/hts/bam"
 	"github.com/dhconnelly/rtreego"
 	"github.com/guigolab/bamstats/utils"
 )
 
+const (
+	DEBUG_ELEMENTS_FILE = "bamstats-coverage.elements.bed"
+)
+
 // RtreeMap is a map of pointers to Rtree with string keys.
 type RtreeMap map[string]*rtreego.Rtree
-
-// Feature represents an annotated element.
-type Feature struct {
-	location *rtreego.Rect
-	chr      string
-	Element  string
-}
-
-// Chr returns the chromosome of the feature
-func (f *Feature) Chr() string {
-	return f.chr
-}
-
-// Start returns the start position of the feature
-func (f *Feature) Start() float64 {
-	return f.location.PointCoord(0)
-}
-
-// End returns the end position of the feature
-func (f *Feature) End() float64 {
-	return f.location.LengthsCoord(0) + f.Start()
-}
-
-// Bounds returns the location of the feature. It is used within the Rtree.
-func (f *Feature) Bounds() *rtreego.Rect {
-	return f.location
-}
 
 // Get returns the pointer to an Rtree for the specified chromosome and create a new Rtree if not present.
 func (t RtreeMap) Get(chr string) *rtreego.Rtree {
@@ -53,32 +25,6 @@ func (t RtreeMap) Get(chr string) *rtreego.Rtree {
 	return t[chr]
 }
 
-func getFileReader(f *os.File, fname string) *bufio.Scanner {
-	var r io.Reader = f
-
-	switch path.Ext(fname) {
-	case ".gz":
-		zipReader, err := gzip.NewReader(f)
-		utils.Check(err)
-		r = zipReader
-	case ".bz2":
-		r = bzip2.NewReader(f)
-	}
-	return bufio.NewScanner(r)
-}
-
-// CreateIndex creates the Rtree indices for the specified annotation file. It builds a Rtree
-// for each chromosome and returns a RtreeMap having the chromosome names as keys.
-func CreateIndex(fname string, cpu int) *RtreeMap {
-	f, err := os.Open(fname)
-	defer f.Close()
-	utils.Check(err)
-
-	reader := getFileReader(f, fname)
-
-	return createIndex(reader, cpu)
-}
-
 func insertInTree(sem chan bool, rt *rtreego.Rtree, feats []*Feature) {
 	defer func() { <-sem }()
 	for _, feat := range feats {
@@ -86,34 +32,67 @@ func insertInTree(sem chan bool, rt *rtreego.Rtree, feats []*Feature) {
 	}
 }
 
-func createIndex(reader *bufio.Scanner, cpu int) *RtreeMap {
+func getChrLens(bamFile string, cpu int) (chrs map[string]int) {
+	bf, err := os.Open(bamFile)
+	utils.Check(err)
+	br, err := bam.NewReader(bf, cpu)
+	utils.Check(err)
+	refs := br.Header().Refs()
+	chrs = make(map[string]int, len(refs))
+	for _, r := range refs {
+		chrs[r.Name()] = r.Len()
+	}
+	return
+}
+
+// CreateIndex creates the Rtree indices for the specified annotation file. It builds a Rtree
+// for each chromosome and returns a RtreeMap having the chromosome names as keys.
+func CreateIndex(annoFile, bamFile string, cpu int) *RtreeMap {
+	f, err := os.Open(annoFile)
+	utils.Check(err)
+	chrLens := getChrLens(bamFile, cpu)
+	scanner := NewScanner(f, chrLens)
+
+	return createIndex(scanner, cpu)
+}
+
+func writeElements() {
+
+}
+
+func createIndex(scanner *Scanner, cpu int) *RtreeMap {
+	var w *bufio.Writer
 	trees := make(RtreeMap)
 	regions := make(map[string][]*Feature)
-
-	for reader.Scan() {
-		line := strings.Split(reader.Text(), "\t")
-		chr := line[0]
+	if logrus.GetLevel() == logrus.DebugLevel {
+		out, _ := os.Create(DEBUG_ELEMENTS_FILE)
+		w = bufio.NewWriter(out)
+	}
+	for scanner.Next() {
+		feature := scanner.Feat()
+		if feature == nil {
+			continue
+		}
+		if feature.Start() == 248.0 {
+			logrus.Debug(feature)
+		}
+		if logrus.GetLevel() == logrus.DebugLevel {
+			w.WriteString(feature.Out())
+			w.WriteRune('\n')
+		}
+		chr := feature.Chr()
 		_, ok := regions[chr]
 		if !ok {
 			var p []*Feature
 			regions[chr] = p
 		}
-		element := line[3]
-		begin, err := strconv.ParseFloat(line[1], 64)
-		if err != nil {
-			log.Panic("Cannot convert to float64")
-		}
-		end, err := strconv.ParseFloat(line[2], 64)
-		if err != nil {
-			log.Panic("Cannot convert to float64")
-		}
-		loc := rtreego.Point{begin, begin}
-		size := end - begin
-		rect, err := rtreego.NewRect(loc, []float64{size, size})
-		if err != nil {
-			log.Panic(err)
-		}
-		regions[chr] = append(regions[chr], &Feature{rect, chr, element})
+		regions[chr] = append(regions[chr], feature)
+	}
+	if logrus.GetLevel() == logrus.DebugLevel {
+		w.Flush()
+	}
+	if scanner.Error() != nil {
+		logrus.Panic(scanner.Error())
 	}
 
 	sem := make(chan bool, cpu)
