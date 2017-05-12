@@ -36,7 +36,7 @@ The above metrics are computed for continuous and split mapped reads. An aggrega
 
 The `--uniq` (or `-u`) command line flag allows reporting of genome coverage statistics for uniquely mapped reads too.
 
-== Output file examples:
+== Output examples:
 
 Some examples of the program output can be found in the `data` folder within the GitHub repository:
 
