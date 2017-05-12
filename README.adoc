@@ -1,6 +1,7 @@
 = bamstats
 
 https://travis-ci.org/guigolab/bamstats[image:https://travis-ci.org/guigolab/bamstats.svg?branch=develop["Build Status"]^]
+https://coveralls.io/github/guigolab/bamstats[https://coveralls.io/repos/github/guigolab/bamstats/badge.svg?branch=develop[Coverage Status]]
 
 `Bamstats` is a command line tool written in `Go` for computing mapping statistics from a `BAM` file.
 
