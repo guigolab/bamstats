@@ -113,69 +113,69 @@ func TestMergeIntervals(t *testing.T) {
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{11869, 11869}, []float64{358, 358}, t),
+			location: newRect(rtreego.Point{11869}, []float64{358}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{12010, 12010}, []float64{47, 47}, t),
+			location: newRect(rtreego.Point{12010}, []float64{47}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{12179, 12179}, []float64{48, 48}, t),
+			location: newRect(rtreego.Point{12179}, []float64{48}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{12613, 12613}, []float64{84, 84}, t),
+			location: newRect(rtreego.Point{12613}, []float64{84}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{12613, 12613}, []float64{108, 108}, t),
+			location: newRect(rtreego.Point{12613}, []float64{108}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{12975, 12975}, []float64{77, 77}, t),
+			location: newRect(rtreego.Point{12975}, []float64{77}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{13221, 13221}, []float64{153, 153}, t),
+			location: newRect(rtreego.Point{13221}, []float64{153}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{13221, 13221}, []float64{1188, 1188}, t),
+			location: newRect(rtreego.Point{13221}, []float64{1188}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{13453, 13453}, []float64{217, 217}, t),
+			location: newRect(rtreego.Point{13453}, []float64{217}, t),
 		},
 	}
 	expected := []*Feature{
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{11869, 11869}, []float64{358, 358}, t),
+			location: newRect(rtreego.Point{11869}, []float64{358}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{12613, 12613}, []float64{108, 108}, t),
+			location: newRect(rtreego.Point{12613}, []float64{108}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{12975, 12975}, []float64{77, 77}, t),
+			location: newRect(rtreego.Point{12975}, []float64{77}, t),
 		},
 		&Feature{
 			chr:      chr,
 			element:  element,
-			location: newRect(rtreego.Point{13221, 13221}, []float64{1188, 1188}, t),
+			location: newRect(rtreego.Point{13221}, []float64{1188}, t),
 		},
 	}
 	results := mergeIntervals(elements)

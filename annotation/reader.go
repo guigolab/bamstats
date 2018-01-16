@@ -163,9 +163,9 @@ func parseInterval(b, e []byte) (begin, end float64) {
 }
 
 func parseFeature(chr, element []byte, begin, end float64) (*Feature, error) {
-	loc := rtreego.Point{begin, begin}
+	loc := rtreego.Point{begin}
 	size := end - begin
-	rect, err := rtreego.NewRect(loc, []float64{size, size})
+	rect, err := rtreego.NewRect(loc, []float64{size})
 	if err != nil {
 		return nil, err
 	}
@@ -356,9 +356,9 @@ func mergeIntervals(intervals []*Feature) []*Feature {
 	x, intervals := intervals[0], intervals[1:]
 	for n, i := range intervals {
 		if i.Start() <= x.End() {
-			loc := rtreego.Point{x.Start(), x.Start()}
+			loc := rtreego.Point{x.Start()}
 			size := float64(utils.Max(int(i.End()), int(x.End()))) - x.Start()
-			rect, err := rtreego.NewRect(loc, []float64{size, size})
+			rect, err := rtreego.NewRect(loc, []float64{size})
 			if err != nil {
 				log.Panic(err)
 			}
@@ -381,9 +381,9 @@ func insertBetweenIntervals(intervals []*Feature, element []byte, extremes bool)
 	for n, i := range intervals {
 		if n == 0 && extremes || n > 0 {
 			end = i.Start()
-			loc := rtreego.Point{start, start}
+			loc := rtreego.Point{start}
 			size := end - start
-			rect, err := rtreego.NewRect(loc, []float64{size, size})
+			rect, err := rtreego.NewRect(loc, []float64{size})
 			if err != nil {
 				log.Panic(err)
 			}

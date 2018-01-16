@@ -20,7 +20,7 @@ type RtreeMap map[string]*rtreego.Rtree
 // Get returns the pointer to an Rtree for the specified chromosome and create a new Rtree if not present.
 func (t RtreeMap) Get(chr string) *rtreego.Rtree {
 	if _, ok := t[chr]; !ok {
-		t[chr] = rtreego.NewTree(2, 25, 50)
+		t[chr] = rtreego.NewTree(1, 25, 50)
 	}
 	return t[chr]
 }
@@ -73,9 +73,6 @@ func createIndex(scanner *Scanner, cpu int) *RtreeMap {
 		if feature == nil {
 			continue
 		}
-		if feature.Start() == 248.0 {
-			logrus.Debug(feature)
-		}
 		if logrus.GetLevel() == logrus.DebugLevel {
 			w.WriteString(feature.Out())
 			w.WriteRune('\n')
@@ -111,7 +108,7 @@ func createIndex(scanner *Scanner, cpu int) *RtreeMap {
 func QueryIndex(index *rtreego.Rtree, begin, end float64) []rtreego.Spatial {
 	size := end - begin
 	// Create the bounding box for the query:
-	bb, _ := rtreego.NewRect(rtreego.Point{begin, begin}, []float64{size, size})
+	bb, _ := rtreego.NewRect(rtreego.Point{begin}, []float64{size})
 
 	// Get a slice of the objects in rt that intersect bb:
 	return index.SearchIntersect(bb)
