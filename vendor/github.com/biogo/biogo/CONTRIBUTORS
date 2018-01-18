@@ -1,0 +1,24 @@
+# This is the official list of people who can contribute
+# (and typically have contributed) code to the bíogo repository.
+#
+# The AUTHORS file lists the copyright holders; this file
+# lists people.  For example, Google employees would be listed here
+# but not in AUTHORS, if Google held the copyright.
+#
+# When adding J Random Contributor's name to this file,
+# either J's name or J's organization's name should be
+# added to the AUTHORS file.
+#
+# Names should be added to this file like so:
+#     Name <email address>
+#
+# Please keep the list sorted.
+
+Brent Pedersen <bpederse@gmail.com>
+Dan Kortschak <dan.kortschak@adelaide.edu.au>
+David Rook <hotei1352@gmail.com>
+Emmanouil "Manolis" Maragkakis <mns.marag@gmail.com>
+Gordon Gremme <gordon@gremme.org>
+Jason Travis <jtravis@tgen.org>
+Josh Bleecher Snyder <josharian@gmail.com>
+Peter Mattis <petermattis@gmail.com>
