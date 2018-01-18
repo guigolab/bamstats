@@ -11,11 +11,16 @@ import (
 )
 
 const (
-	DEBUG_ELEMENTS_FILE = "bamstats-coverage.elements.bed"
+	debugElementsFile = "bamstats-coverage.elements.bed"
 )
 
 // RtreeMap is a map of pointers to Rtree with string keys.
 type RtreeMap map[string]*rtreego.Rtree
+
+type chunk struct {
+	chr   string
+	feats chan rtreego.Spatial
+}
 
 // Get returns the pointer to an Rtree for the specified chromosome and create a new Rtree if not present.
 func (t RtreeMap) Get(chr string) *rtreego.Rtree {
@@ -25,7 +30,23 @@ func (t RtreeMap) Get(chr string) *rtreego.Rtree {
 	return t[chr]
 }
 
-func insertInTree(sem chan bool, rt *rtreego.Rtree, feats []*Feature) {
+func createTrees(trees RtreeMap, regions chan chunk) {
+	chan2slice := func(c chan rtreego.Spatial) []rtreego.Spatial {
+		var s []rtreego.Spatial
+		for item := range c {
+			s = append(s, item)
+		}
+		return s
+	}
+
+	for chunk := range regions {
+		trees[chunk.chr] = rtreego.NewTree(1, 25, 50, chan2slice(chunk.feats)...)
+		logrus.Debugf("Done %s", chunk.chr)
+	}
+}
+
+func insertInTree(sem chan bool, rt *rtreego.Rtree, feats []rtreego.Spatial) {
+	logrus.Info("Running ", feats[0].(*Feature).Chr())
 	defer func() { <-sem }()
 	for _, feat := range feats {
 		rt.Insert(feat)
@@ -56,50 +77,64 @@ func CreateIndex(annoFile, bamFile string, cpu int) *RtreeMap {
 	return createIndex(scanner, cpu)
 }
 
-func writeElements() {
-
+func writeElements(items <-chan string) {
+	var w *bufio.Writer
+	out, _ := os.Create(debugElementsFile)
+	w = bufio.NewWriter(out)
+	logrus.Debugf("Writing index elements to %s", out.Name())
+	for item := range items {
+		w.WriteString(item)
+		w.WriteRune('\n')
+	}
+	w.Flush()
 }
 
-func createIndex(scanner *Scanner, cpu int) *RtreeMap {
-	var w *bufio.Writer
-	trees := make(RtreeMap)
-	regions := make(map[string][]*Feature)
-	if logrus.GetLevel() == logrus.DebugLevel {
-		out, _ := os.Create(DEBUG_ELEMENTS_FILE)
-		w = bufio.NewWriter(out)
-	}
+func scan(scanner *Scanner, regions chan chunk, elems chan string) {
+	regMap := make(map[string]chan rtreego.Spatial)
+	var chr, lastChr string
 	for scanner.Next() {
 		feature := scanner.Feat()
 		if feature == nil {
 			continue
 		}
 		if logrus.GetLevel() == logrus.DebugLevel {
-			w.WriteString(feature.Out())
-			w.WriteRune('\n')
+			elems <- feature.Out()
 		}
-		chr := feature.Chr()
-		_, ok := regions[chr]
+		if len(chr) == 0 {
+			lastChr = feature.Chr()
+		}
+		chr = feature.Chr()
+		if lastChr != chr {
+			close(regMap[lastChr])
+			lastChr = chr
+		}
+		_, ok := regMap[chr]
 		if !ok {
-			var p []*Feature
-			regions[chr] = p
+			regMap[chr] = make(chan rtreego.Spatial)
+			regions <- chunk{chr, regMap[chr]}
 		}
-		regions[chr] = append(regions[chr], feature)
+		regMap[chr] <- feature
 	}
-	if logrus.GetLevel() == logrus.DebugLevel {
-		w.Flush()
-	}
+	close(regMap[lastChr])
+	close(regions)
+	close(elems)
 	if scanner.Error() != nil {
 		logrus.Panic(scanner.Error())
 	}
+}
 
-	sem := make(chan bool, cpu)
-	for chr := range regions {
-		sem <- true
-		go insertInTree(sem, trees.Get(chr), regions[chr])
+func createIndex(scanner *Scanner, cpu int) *RtreeMap {
+	trees := make(RtreeMap)
+	regions := make(chan chunk)
+	debugElements := make(chan string)
+
+	if logrus.GetLevel() == logrus.DebugLevel {
+		go writeElements(debugElements)
 	}
-	for i := 0; i < cap(sem); i++ {
-		sem <- true
-	}
+
+	go scan(scanner, regions, debugElements)
+
+	createTrees(trees, regions)
 
 	return &trees
 }
