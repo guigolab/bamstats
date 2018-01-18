@@ -94,8 +94,8 @@ func (s *CoverageStats) Collect(record *sam.Record, index *annotation.RtreeMap) 
 	}
 	elements := map[string]uint8{}
 	for _, mappingLocation := range record.GetBlocks() {
-		rtree := (*index)[mappingLocation.Chrom()]
-		if rtree == nil {
+		rtree := index.Get(mappingLocation.Chrom())
+		if rtree.Size() == 0 {
 			return
 		}
 		results := annotation.QueryIndex(rtree, mappingLocation.Start(), mappingLocation.End())
