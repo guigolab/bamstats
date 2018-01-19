@@ -45,14 +45,6 @@ func createTrees(trees RtreeMap, regions chan chunk) {
 	}
 }
 
-func insertInTree(sem chan bool, rt *rtreego.Rtree, feats []rtreego.Spatial) {
-	logrus.Info("Running ", feats[0].(*Feature).Chr())
-	defer func() { <-sem }()
-	for _, feat := range feats {
-		rt.Insert(feat)
-	}
-}
-
 func getChrLens(bamFile string, cpu int) (chrs map[string]int) {
 	bf, err := os.Open(bamFile)
 	utils.Check(err)
