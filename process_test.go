@@ -6,8 +6,10 @@ import (
 	"runtime"
 	"testing"
 
-	. "github.com/guigolab/bamstats/stats"
-	. "github.com/guigolab/bamstats/utils"
+	"github.com/guigolab/bamstats/stats"
+	"github.com/guigolab/bamstats/utils"
+	// . "github.com/guigolab/bamstats/stats"
+	// . "github.com/guigolab/bamstats/utils"
 )
 
 func checkTest(err error, t *testing.T) {
@@ -43,11 +45,11 @@ func TestGeneral(t *testing.T) {
 	if l > 1 {
 		t.Errorf("(Process) Expected StatsMap of length 1, got %d", l)
 	}
-	_, ok := out["general"].(*GeneralStats)
+	_, ok := out["general"].(*stats.GeneralStats)
 	if !ok {
 		t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
 	}
-	OutputJSON(&b, out)
+	utils.OutputJSON(&b, out)
 	stats := readExpected(expectedGeneralJSON, t)
 	if len(b.Bytes()) != len(stats) {
 		t.Error("(Process) GeneralStats are different")
@@ -64,15 +66,15 @@ func TestCoverage(t *testing.T) {
 		if l > 2 {
 			t.Errorf("(Process) Expected StatsMap of length 2, got %d", l)
 		}
-		_, ok := out["general"].(*GeneralStats)
+		_, ok := out["general"].(*stats.GeneralStats)
 		if !ok {
 			t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
 		}
-		_, ok = out["coverage"].(*CoverageStats)
+		_, ok = out["coverage"].(*stats.CoverageStats)
 		if !ok {
 			t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverage"])
 		}
-		OutputJSON(&b, out)
+		utils.OutputJSON(&b, out)
 		stats := readExpected(expectedCoverageJSON, t)
 		if len(b.Bytes()) != len(stats) {
 			t.Error("(Process) CoverageStats are different")
@@ -90,15 +92,15 @@ func TestCoverageUniq(t *testing.T) {
 		if l > 3 {
 			t.Errorf("(Process) Expected StatsMap of length 3, got %d", l)
 		}
-		_, ok := out["general"].(*GeneralStats)
+		_, ok := out["general"].(*stats.GeneralStats)
 		if !ok {
 			t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
 		}
-		_, ok = out["coverage"].(*CoverageStats)
+		_, ok = out["coverage"].(*stats.CoverageStats)
 		if !ok {
 			t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverage"])
 		}
-		OutputJSON(&b, out)
+		utils.OutputJSON(&b, out)
 		stats := readExpected(expectedCoverageUniqJSON, t)
 		if len(b.Bytes()) != len(stats) {
 			t.Error("(Process) CoverageStats are different")
