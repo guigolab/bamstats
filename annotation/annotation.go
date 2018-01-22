@@ -10,7 +10,7 @@ import (
 	"github.com/guigolab/bamstats/utils"
 )
 
-const (
+var (
 	debugElementsFile = "bamstats-coverage.elements.bed"
 )
 

@@ -3,8 +3,12 @@ package annotation
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"regexp"
 	"testing"
+
+	"github.com/Sirupsen/logrus"
 
 	"github.com/dhconnelly/rtreego"
 )
@@ -29,8 +33,12 @@ chr16	30975	31109	exon
 `)
 	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), 1)
 	l := len(*index)
-	if l != 16 {
-		t.Errorf("(createIndex) expected length 15, got %v", l)
+	isTab := func(c rune) bool {
+		return c == '\n'
+	}
+	expLen := len(bytes.FieldsFunc(elements, isTab))
+	if l != expLen {
+		t.Errorf("(createIndex) expected length %v, got %v", expLen, l)
 	}
 	for key, value := range *index {
 		typeString := fmt.Sprintf("%T", value)
@@ -187,4 +195,38 @@ func TestMergeIntervals(t *testing.T) {
 			t.Errorf("(MergeElements) merged results error.\ngot: %v \nexp: %v", results[i], e)
 		}
 	}
+}
+
+func TestWriteElements(t *testing.T) {
+	elements := []byte(`chr1	11868	12227	exon
+chr2	12612	12721	exon
+chr3	12974	13052	exon
+chr4	13220	14501	exon
+chr5	15004	15038	exon
+chr6	15795	15947	exon
+chr7	16606	16765	exon
+chr8	16857	17055	exon
+chr9	17232	17436	exon
+chr10	17605	17742	exon
+chr11	17914	18061	exon
+chr12	18267	18366	exon
+chr13	24737	24891	exon
+chr14	29533	30039	exon
+chr15	30266	30667	exon
+chr16	30975	31109	exon
+`)
+	logrus.SetLevel(logrus.DebugLevel) // set debug level
+	debugElementsFile = ".test.debug.elfile.bed"
+	_ = createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), 1)
+	if _, err := os.Stat(debugElementsFile); os.IsNotExist(err) {
+		t.Errorf("(createIndex) Debug element file not found")
+	}
+	e, err := ioutil.ReadFile(debugElementsFile)
+	if err != nil {
+		t.Fatalf("(createIndex) Cannot read file: %s", err)
+	}
+	if bytes.Compare(elements, e) != 0 {
+		t.Fatalf("(createIndex) Wrong debug elements file")
+	}
+	os.Remove(debugElementsFile)
 }
