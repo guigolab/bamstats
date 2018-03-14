@@ -218,15 +218,15 @@ chr16	30975	31109	exon
 	logrus.SetLevel(logrus.DebugLevel) // set debug level
 	debugElementsFile = ".test.debug.elfile.bed"
 	_ = createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), 1)
-	if _, err := os.Stat(debugElementsFile); os.IsNotExist(err) {
-		t.Errorf("(createIndex) Debug element file not found")
-	}
 	e, err := ioutil.ReadFile(debugElementsFile)
+	if os.IsNotExist(err) {
+		t.Fatal("(createIndex) Debug elements file not found")
+	}
 	if err != nil {
-		t.Fatalf("(createIndex) Cannot read file: %s", err)
+		t.Fatalf("(createIndex) Cannot read debug elements file: %s", err)
 	}
 	if bytes.Compare(elements, e) != 0 {
-		t.Fatalf("(createIndex) Wrong debug elements file")
+		t.Fatalf("(createIndex) Debug elements file contents do not match the expected value")
 	}
 	os.Remove(debugElementsFile)
 }
