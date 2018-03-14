@@ -30,7 +30,7 @@ dev: prepareDev build
 $(ENVS):
 	@$(MAKE) bin/"$@"/$(CMD)
 
-$(BINARIES): $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
+$(BINARIES): $(CMD_DIR)/*.go */*.go *.go
 	$(eval TERMS := $(subst /, ,"$@"))
 	$(eval GOOS := $(word 2, $(TERMS)))
 	$(eval GOARCH := $(word 3, $(TERMS)))
@@ -77,7 +77,7 @@ bench:
 profile: cpu.prof
 	@go tool pprof bamstats.test $?
 
-install: prepareDev $(CMD_DIR)/*.go */*.go *.go GoDeps/GoDeps.json
+install: prepareDev $(CMD_DIR)/*.go */*.go *.go
 	@go install $(LDFLAGS) ./$(CMD_DIR)
 
 ant: prepareDev bin/linux/amd64/$(CMD)
