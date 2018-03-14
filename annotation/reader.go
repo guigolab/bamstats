@@ -6,7 +6,6 @@ import (
 	"compress/bzip2"
 	"compress/gzip"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -134,7 +133,7 @@ func (r *FeatureReader) Read() (f *Feature, err error) {
 	case GTF:
 		f, err = readGtf(r)
 	default:
-		err = errors.New(fmt.Sprintf("FeatureReader, %s format error", r.format))
+		err = fmt.Errorf("FeatureReader, %s format error", r.format)
 	}
 	return
 }
