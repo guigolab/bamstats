@@ -2,8 +2,8 @@ package stats
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/guigolab/bamstats/annotation"
 	"github.com/guigolab/bamstats/sam"
@@ -12,15 +12,14 @@ import (
 // general element constants
 const (
 	Exon       = "exon"
-	Intron     = "intron"
-	Intergenic = "intergenic"
 	ExonIntron = "exonic_intronic"
-	Total      = "total"
+	Intergenic = "intergenic"
+	Intron     = "intron"
 	Other      = "others"
+	Total      = "total"
 )
 
 var (
-	// allElems = []string{Exon, Intron, Intergenic, ExonIntron, Other, Total}
 	allElems = []string{
 		ExonIntron,
 		Intron,
@@ -31,17 +30,49 @@ var (
 	}
 )
 
+func getElemSet() map[string]struct{} {
+	elemSet := make(map[string]struct{})
+	for _, el := range allElems {
+		elemSet[el] = struct{}{}
+	}
+	return elemSet
+}
+
 // ElementStats represents mappings statistics for genomic elements
 type ElementStats map[string]uint64
 
-// type ElementStats struct {
-// 	ExonIntron uint64 `json:"exonic_intronic"`
-// 	Intron     uint64 `json:"intron"`
-// 	Exon       uint64 `json:"exon"`
-// 	Intergenic uint64 `json:"intergenic"`
-// 	Other      uint64 `json:"others"`
-// 	Total      uint64 `json:"total"`
-// }
+// Keys returns map keys
+func (s ElementStats) Keys() []string {
+	var keys []string
+	elemSet := getElemSet()
+	for k := range s {
+		if _, found := elemSet[k]; !found {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	return append(keys, allElems...)
+}
+
+// MergeKeys combine keys from two ElementsStats instances
+func (s ElementStats) MergeKeys(other ElementStats) []string {
+	elemSet := getElemSet()
+	var keys []string
+	for _, k := range s.Keys() {
+		if _, found := elemSet[k]; !found {
+			keys = append(keys, k)
+		}
+	}
+	for _, k := range other.Keys() {
+		if _, found := elemSet[k]; !found {
+			if _, hasThis := s[k]; !hasThis {
+				keys = append(keys, k)
+			}
+		}
+	}
+	sort.Strings(keys)
+	return append(keys, allElems...)
+}
 
 // CoverageStats represents genome coverage statistics for continuos, split and total mapped reads.
 type CoverageStats struct {
@@ -71,7 +102,7 @@ func (s *CoverageStats) Merge(others chan Stats) {
 
 // Finalize updates dependent counts of a CoverageStats instance.
 func (s *CoverageStats) Finalize() {
-	for _, elem := range allElems {
+	for _, elem := range s.Continuous.MergeKeys(s.Split) {
 		s.Total[elem] = s.Continuous[elem] + s.Split[elem]
 	}
 }
@@ -87,13 +118,14 @@ func (s ElementStats) Update(other ElementStats) {
 func (s ElementStats) MarshalJSON() ([]byte, error) {
 	buf := &bytes.Buffer{}
 	buf.Write([]byte{'{', '\n'})
-	l := len(allElems)
-	for i, k := range allElems {
-		val, err := json.Marshal(s[k])
-		if err != nil {
-			return nil, err
-		}
-		fmt.Fprintf(buf, "\t\"%s\": %s", k, val)
+	keys := s.Keys()
+	l := len(keys)
+	for i, k := range keys {
+		// TODO: write 0 values elements? Update test output in case
+		// if s[k] == 0 {
+		// 	continue
+		// }
+		fmt.Fprintf(buf, "\t\"%s\": %d", k, s[k])
 		if i < l-1 {
 			buf.WriteByte(',')
 		}
@@ -104,6 +136,9 @@ func (s ElementStats) MarshalJSON() ([]byte, error) {
 }
 
 func updateCount(r *sam.Record, elems map[string]uint8, st ElementStats) {
+	if len(elems) == 0 {
+		return
+	}
 	exons, hasExon := elems["exon"]
 	introns, hasIntron := elems["intron"]
 	st[Total]++
@@ -123,31 +158,25 @@ func updateCount(r *sam.Record, elems map[string]uint8, st ElementStats) {
 		st[Intron]++
 		return
 	}
-	st[ExonIntron]++
-}
+	if hasIntron && hasExon && introns > 0 && exons > 0 {
+		st[ExonIntron]++
+		return
+	}
+	var keys []string
+	for k := range elems {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-// func updateCount2(r *sam.Record, elems map[string]uint8, st ElementStats) {
-// 	exons, hasExon := elems["exon"]
-// 	introns, hasIntron := elems["intron"]
-// 	st.Total++
-// 	if _, isIntergenic := elems["intergenic"]; isIntergenic {
-// 		if len(elems) > 1 {
-// 			st.Other++
-// 		} else {
-// 			st.Intergenic++
-// 		}
-// 		return
-// 	}
-// 	if hasExon && !hasIntron && exons > 0 {
-// 		st.Exon++
-// 		return
-// 	}
-// 	if hasIntron && !hasExon && introns > 0 {
-// 		st.Intron++
-// 		return
-// 	}
-// 	st.ExonIntron++
-// }
+	var buf bytes.Buffer
+	for i, e := range keys {
+		if i > 0 {
+			buf.WriteByte('_')
+		}
+		buf.WriteString(e)
+	}
+	st[buf.String()]++
+}
 
 // Collect collects genome coverage statistics from a sam.Record.
 func (s *CoverageStats) Collect(record *sam.Record, index *annotation.RtreeMap) {
