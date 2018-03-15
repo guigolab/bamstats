@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	PEEKLEN = 4096
+	peekLen = 4096
 )
 
+// FeatureReader is a struct for readinf features
 type FeatureReader struct {
 	r            *bufio.Reader
 	format       Format
@@ -30,9 +31,10 @@ type FeatureReader struct {
 	chrLens      map[string]int
 }
 
+// NewFeatureReader returns a new instance of FeatureReader
 func NewFeatureReader(r io.Reader, chrs map[string]int) *FeatureReader {
 	br := buffReader(r)
-	format := scanFormat(br, PEEKLEN)
+	format := scanFormat(br, peekLen)
 	return &FeatureReader{
 		r:       br,
 		format:  format,

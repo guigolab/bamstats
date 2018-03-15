@@ -1,7 +1,9 @@
 package annotation
 
+// Format type
 type Format int
 
+// exported formats
 const (
 	UNDEF Format = iota - 1
 	BED

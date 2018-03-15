@@ -65,7 +65,7 @@ func (f *Feature) Out() string {
 	return fmt.Sprintf("%s\t%.0f\t%.0f\t%s", f.Chr(), f.Start(), f.End(), f.Element())
 }
 
-// String returns the string representation of a Feature
+// Clone returns a clone of f
 func (f *Feature) Clone() *Feature {
 	return NewFeature(f.chr, f.element, f.location)
 }

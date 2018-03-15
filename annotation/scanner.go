@@ -2,6 +2,7 @@ package annotation
 
 import "io"
 
+// Scanner represent a scanner of features
 type Scanner struct {
 	r    *FeatureReader
 	feat *Feature
@@ -15,7 +16,7 @@ func NewScanner(r io.Reader, chrs map[string]int) *Scanner {
 	}
 }
 
-// Feature returns the current read feature
+// Next reads the next feature
 func (s *Scanner) Next() bool {
 	if s.err != nil {
 		return false
@@ -32,7 +33,7 @@ func (s *Scanner) Error() error {
 	return s.err
 }
 
-// Feature returns the current read feature
+// Feat returns the current read feature
 func (s *Scanner) Feat() *Feature {
 	return s.feat
 }
