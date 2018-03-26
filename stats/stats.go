@@ -1,7 +1,6 @@
 package stats
 
 import (
-	"github.com/guigolab/bamstats/annotation"
 	"github.com/guigolab/bamstats/sam"
 )
 
@@ -9,15 +8,15 @@ import (
 type Stats interface {
 	Update(other Stats)
 	Merge(others chan Stats)
-	Collect(record *sam.Record, index *annotation.RtreeMap)
+	Collect(record *sam.Record)
 	Finalize()
 }
 
-// StatsMap is a map of Stats instances with string keys.
-type StatsMap map[string]Stats
+// Map is a map of Stats instances with string keys.
+type Map map[string]Stats
 
 // Merge merges instances of StatsMap
-func (sm *StatsMap) Merge(stats chan StatsMap) {
+func (sm *Map) Merge(stats chan Map) {
 	for s := range stats {
 		for key, stat := range *sm {
 			if otherStat, ok := s[key]; ok {
@@ -27,18 +26,24 @@ func (sm *StatsMap) Merge(stats chan StatsMap) {
 	}
 }
 
-func NewStatsMap(general, coverage, uniq bool) StatsMap {
-	m := make(StatsMap)
-	if general {
-		m["general"] = NewGeneralStats()
-	}
-	if coverage {
-		m["coverage"] = NewCoverageStats()
-	}
-	if uniq {
-		cs := NewCoverageStats()
-		cs.uniq = true
-		m["coverageUniq"] = cs
-	}
-	return m
+// Add adds a new Stats object to sm
+func (sm Map) Add(key string, s Stats) {
+	sm[key] = s
 }
+
+// NewMap creates and instance of a stats.Map
+// func NewMap(general, coverage, uniq bool) Map {
+// 	m := make(Map)
+// 	if general {
+// 		m["general"] = NewGeneralStats()
+// 	}
+// 	if coverage {
+// 		m["coverage"] = NewCoverageStats()
+// 	}
+// 	if uniq {
+// 		cs := NewCoverageStats()
+// 		cs.Uniq = true
+// 		m["coverageUniq"] = cs
+// 	}
+// 	return m
+// }

@@ -3,7 +3,6 @@ package stats
 import (
 	"math"
 
-	"github.com/guigolab/bamstats/annotation"
 	"github.com/guigolab/bamstats/sam"
 )
 
@@ -131,7 +130,7 @@ func NewMappedPairsStats() *MappedPairsStats {
 }
 
 // Collect collects general mapping statistics from a sam.Record.
-func (s *GeneralStats) Collect(r *sam.Record, index *annotation.RtreeMap) {
+func (s *GeneralStats) Collect(r *sam.Record) {
 	NH, hasNH := r.Tag([]byte("NH"))
 	if !hasNH {
 		NH, _ = sam.ParseAux([]byte("NH:i:0"))

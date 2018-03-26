@@ -79,7 +79,8 @@ type CoverageStats struct {
 	Total      ElementStats `json:"total"`
 	Continuous ElementStats `json:"continuous"`
 	Split      ElementStats `json:"split"`
-	uniq       bool
+	Uniq       bool         `json:"-"`
+	index      *annotation.RtreeMap
 }
 
 // Update updates all counts from a Stats instance.
@@ -179,16 +180,16 @@ func updateCount(r *sam.Record, elems map[string]uint8, st ElementStats) {
 }
 
 // Collect collects genome coverage statistics from a sam.Record.
-func (s *CoverageStats) Collect(record *sam.Record, index *annotation.RtreeMap) {
-	if index == nil || !record.IsPrimary() || record.IsUnmapped() {
+func (s *CoverageStats) Collect(record *sam.Record) {
+	if s.index == nil || !record.IsPrimary() || record.IsUnmapped() {
 		return
 	}
-	if s.uniq && !record.IsUniq() {
+	if s.Uniq && !record.IsUniq() {
 		return
 	}
 	elements := map[string]uint8{}
 	for _, mappingLocation := range record.GetBlocks() {
-		rtree := index.Get(mappingLocation.Chrom())
+		rtree := s.index.Get(mappingLocation.Chrom())
 		if rtree.Size() == 0 {
 			return
 		}
@@ -203,10 +204,12 @@ func (s *CoverageStats) Collect(record *sam.Record, index *annotation.RtreeMap) 
 }
 
 // NewCoverageStats create a new instance of CoverageStats.
-func NewCoverageStats() *CoverageStats {
+func NewCoverageStats(index *annotation.RtreeMap, uniq bool) *CoverageStats {
 	return &CoverageStats{
 		Total:      make(ElementStats),
 		Continuous: make(ElementStats),
 		Split:      make(ElementStats),
+		Uniq:       uniq,
+		index:      index,
 	}
 }
