@@ -8,8 +8,6 @@ import (
 
 	"github.com/guigolab/bamstats/stats"
 	"github.com/guigolab/bamstats/utils"
-	// . "github.com/guigolab/bamstats/stats"
-	// . "github.com/guigolab/bamstats/utils"
 )
 
 func checkTest(err error, t *testing.T) {
@@ -52,6 +50,10 @@ func TestGeneral(t *testing.T) {
 	utils.OutputJSON(&b, out)
 	stats := readExpected(expectedGeneralJSON, t)
 	if len(b.Bytes()) != len(stats) {
+		err := dump(b, "observed-general.json")
+		if err != nil {
+			t.Errorf("(Process) Debug dump error: %s", err)
+		}
 		t.Error("(Process) GeneralStats are different")
 	}
 }
@@ -77,6 +79,10 @@ func TestCoverage(t *testing.T) {
 		utils.OutputJSON(&b, out)
 		stats := readExpected(expectedCoverageJSON, t)
 		if len(b.Bytes()) != len(stats) {
+			err := dump(b, "observed-coverage.json")
+			if err != nil {
+				t.Errorf("(Process) Debug dump error: %s", err)
+			}
 			t.Error("(Process) CoverageStats are different")
 		}
 	}
@@ -103,6 +109,10 @@ func TestCoverageUniq(t *testing.T) {
 		utils.OutputJSON(&b, out)
 		stats := readExpected(expectedCoverageUniqJSON, t)
 		if len(b.Bytes()) != len(stats) {
+			err := dump(b, "observed-coverage-uniq.json")
+			if err != nil {
+				t.Errorf("(Process) Debug dump error: %s", err)
+			}
 			t.Error("(Process) CoverageStats are different")
 		}
 	}
@@ -120,4 +130,14 @@ func BenchmarkCoverage(b *testing.B) {
 			Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, false)
 		}
 	}
+}
+
+func dump(b bytes.Buffer, fname string) error {
+	s, err := os.Create(fname)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	_, err = s.Write(b.Bytes())
+	return err
 }
