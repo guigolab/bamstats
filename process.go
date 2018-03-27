@@ -106,15 +106,15 @@ func Process(bamFile string, anno string, cpu int, maxBuf int, reads int, uniq b
 	}
 	start := time.Now()
 	log.Infof("Collecting stats for %s", bamFile)
-	stats, err := process(bamFile, index, cpu, maxBuf, reads, uniq)
+	allStats, err := process(bamFile, index, cpu, maxBuf, reads, uniq)
 	if err != nil {
 		return nil, err
 	}
 	log.Infof("Stats done in %v", time.Since(start))
-	return stats, nil
+	return allStats, nil
 }
 
-func writeOutput(output string, st stats.Map) {
+func WriteOutput(output string, st stats.Map) {
 	out := utils.NewOutput(output)
 	utils.OutputJSON(out, st)
 }
