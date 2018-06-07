@@ -64,15 +64,23 @@ pushRelease: release
 	@[[ $(VER) == $(TAG) ]]	&& $(MAKE) $(COMPRESSED_BINARIES:%=upload-%) || true
 
 test:
-	@go test -cpu=1,2 ./annotation 
-	@go test -cpu=1,2 ./config 
-	@go test -cpu=1,2 ./sam 
-	@go test -cpu=1,2 ./stats 
-	@go test -cpu=1,2 ./utils 
+	@go test -cpu=1,2 ./annotation
+	@go test -cpu=1,2 ./config
+	@go test -cpu=1,2 ./sam
+	@go test -cpu=1,2 ./stats
+	@go test -cpu=1,2 ./utils
 	@go test -cpu=1,2 .
 
+race:
+	@go test -cpu=1,2 -race ./annotation
+	@go test -cpu=1,2 -race ./config
+	@go test -cpu=1,2 -race ./sam
+	@go test -cpu=1,2 -race ./stats
+	@go test -cpu=1,2 -race ./utils
+	@go test -cpu=1,2 -race .
+
 bench:
-	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof
+	@go test -cpu=1,2,4 -bench . -run NOTHING -benchtime 4s -cpuprofile cpu.prof -memprofile prof.mem
 
 profile: cpu.prof
 	@go tool pprof bamstats.test $?
