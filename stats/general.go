@@ -8,9 +8,10 @@ import (
 
 // MappedReadsStats represents statistics for mapped reads
 type MappedReadsStats struct {
-	Total    uint64 `json:"total,omitempty"`
-	Unmapped uint64 `json:"unmapped,omitempty"`
-	Mapped   TagMap `json:"mapped,omitempty"`
+	Total      uint64 `json:"total,omitempty"`
+	Unmapped   uint64 `json:"unmapped,omitempty"`
+	Mapped     TagMap `json:"mapped,omitempty"`
+	Duplicated uint64 `json:"duplicates,omitempty"`
 }
 
 // MappingsStats represents statistics for mappings
@@ -66,6 +67,7 @@ func (s *GeneralStats) Finalize() {
 func (s *MappedReadsStats) Update(other MappedReadsStats) {
 	s.Total += other.Total
 	s.Unmapped += other.Unmapped
+	s.Duplicated += other.Duplicated
 	s.Mapped.Update(other.Mapped)
 }
 
@@ -151,6 +153,9 @@ func (s *GeneralStats) Collect(r *sam.Record) {
 			s.Pairs.Mapped[NHKey]++
 			isLen := int(math.Abs(float64(r.TempLen)))
 			s.Pairs.InsertSizes[isLen]++
+		}
+		if r.IsDuplicate() {
+			s.Reads.Duplicated++
 		}
 	}
 }
