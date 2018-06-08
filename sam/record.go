@@ -10,7 +10,11 @@ type Record struct {
 	*sam.Record
 }
 
-var ParseAux = sam.ParseAux
+// Export original sam.Record functions
+var (
+	NewTag = sam.NewTag
+	NewAux = sam.NewAux
+)
 
 func NewRecord(r *sam.Record) *Record {
 	return &Record{r}

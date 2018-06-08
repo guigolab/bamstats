@@ -133,7 +133,8 @@ func NewMappedPairsStats() *MappedPairsStats {
 func (s *GeneralStats) Collect(r *sam.Record) {
 	NH, hasNH := r.Tag([]byte("NH"))
 	if !hasNH {
-		NH, _ = sam.ParseAux([]byte("NH:i:0"))
+		t := sam.NewTag("NH")
+		NH, _ = sam.NewAux(t, 0)
 	}
 	NHKey := int(NH.Value().(uint8))
 	if r.IsUnmapped() {
