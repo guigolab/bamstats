@@ -1,6 +1,7 @@
 package annotation
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/dhconnelly/rtreego"
@@ -30,6 +31,10 @@ func (loc *Location) Start() float64 {
 // End returns the location end position
 func (loc *Location) End() float64 {
 	return loc.end
+}
+
+func (loc *Location) String() string {
+	return fmt.Sprintf("%s:%d-%d", loc.chrom, int(loc.start), int(loc.end))
 }
 
 // GetElements returns all elements overlapping with buf
