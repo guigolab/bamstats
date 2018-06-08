@@ -2,10 +2,10 @@ package main
 
 import (
 	"runtime"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/guigolab/bamstats"
 	"github.com/spf13/cobra"
-	"runtime"
 )
 
 var (
