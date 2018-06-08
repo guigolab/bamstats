@@ -1,6 +1,7 @@
 package main
 
 import (
+	"runtime"
 	log "github.com/Sirupsen/logrus"
 	"github.com/guigolab/bamstats"
 	"github.com/spf13/cobra"
@@ -43,7 +44,7 @@ func setBamstatsFlags(c *cobra.Command) {
 	c.PersistentFlags().StringVarP(&annotation, "annotaion", "a", "", "element annotation file")
 	c.PersistentFlags().StringVarP(&loglevel, "loglevel", "", "warn", "logging level")
 	c.PersistentFlags().StringVarP(&output, "output", "o", "-", "output file")
-	c.PersistentFlags().IntVarP(&cpu, "cpu", "c", 1, "number of cpus to be used")
+	c.PersistentFlags().IntVarP(&cpu, "cpu", "c", runtime.NumCPU(), "number of cpus to be used")
 	c.PersistentFlags().IntVarP(&maxBuf, "max-buf", "", 1000000, "maximum number of buffered records")
 	c.PersistentFlags().IntVarP(&reads, "reads", "n", -1, "number of records to process")
 	c.PersistentFlags().BoolVarP(&uniq, "uniq", "u", false, "output genomic coverage statistics for uniqely mapped reads too")
