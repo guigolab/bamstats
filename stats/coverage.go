@@ -165,20 +165,6 @@ func updateCount(elems map[string]uint8, st ElementStats) {
 		st[ExonIntron]++
 		return
 	}
-	var keys []string
-	for k := range elems {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	var buf bytes.Buffer
-	for i, e := range keys {
-		if i > 0 {
-			buf.WriteByte('_')
-		}
-		buf.WriteString(e)
-	}
-	st[buf.String()]++
 }
 
 // Collect collects genome coverage statistics from a sam.Record.
