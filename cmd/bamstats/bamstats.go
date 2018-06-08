@@ -1,10 +1,12 @@
 package main
 
 import (
+	"os"
 	"runtime"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/guigolab/bamstats"
+	"github.com/guigolab/bamstats/stats"
 	"github.com/spf13/cobra"
 )
 
@@ -29,13 +31,18 @@ func run(cmd *cobra.Command, args []string) (err error) {
 	// Get stats
 	log.Infof("Running %s %s", cmd.Use, bamstats.Version())
 	log.Infof("Using %v out of %v logical CPUs", cpu, runtime.NumCPU())
-	stats, err := bamstats.Process(bam, annotation, cpu, maxBuf, reads, uniq)
+	allStats, err := bamstats.Process(bam, annotation, cpu, maxBuf, reads, uniq)
 	if err != nil {
 		return
 	}
+	bamstats.WriteOutput(output, allStats)
 
-	bamstats.WriteOutput(output, stats)
-
+	m := &stats.IHECmetrics{}
+	err = m.Calculate(allStats)
+	if err != nil {
+		return
+	}
+	m.Output(os.Stdout)
 	return
 }
 
