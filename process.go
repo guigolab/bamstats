@@ -74,7 +74,7 @@ func process(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, re
 		go worker(id, br.Channels[i], statChan, index, conf, &wg)
 	}
 
-	br.Read()
+	go br.Read()
 
 	go waitProcess(statChan, &wg)
 	stat := <-statChan
