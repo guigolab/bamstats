@@ -70,6 +70,10 @@ func (r *Record) IsFirstOfValidPair() bool {
 	return r.IsPaired() && r.IsRead1() && r.IsProperlyPaired() && !r.HasMateUnmapped()
 }
 
+func (r *Record) IsDuplicate() bool {
+	return r.Flags&sam.Duplicate == sam.Duplicate
+}
+
 func (r *Record) GetBlocks() []*annotation.Location {
 	blocks := make([]*annotation.Location, 0, 10)
 	ref := r.Ref.Name()
