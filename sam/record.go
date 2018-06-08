@@ -75,7 +75,7 @@ func (r *Record) GetBlocks() []*annotation.Location {
 	for _, co := range r.Cigar {
 		coType := co.Type()
 		if coType == sam.CigarSkipped {
-			blocks = append(blocks, annotation.NewLocation(ref, float64(start), float64(end)))
+			blocks = append(blocks, annotation.NewLocation(ref, start, end))
 			start = end + co.Len()
 			end = start
 			continue
@@ -86,6 +86,6 @@ func (r *Record) GetBlocks() []*annotation.Location {
 			end = utils.Max(end, start)
 		}
 	}
-	blocks = append(blocks, annotation.NewLocation(ref, float64(start), float64(end)))
+	blocks = append(blocks, annotation.NewLocation(ref, start, end))
 	return blocks
 }

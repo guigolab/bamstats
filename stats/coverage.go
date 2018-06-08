@@ -136,10 +136,11 @@ func (s ElementStats) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func updateCount(r *sam.Record, elems map[string]uint8, st ElementStats) {
+func updateCount(elems map[string]uint8, st ElementStats) {
 	if len(elems) == 0 {
 		return
 	}
+
 	exons, hasExon := elems["exon"]
 	introns, hasIntron := elems["intron"]
 	st[Total]++
@@ -151,6 +152,7 @@ func updateCount(r *sam.Record, elems map[string]uint8, st ElementStats) {
 		}
 		return
 	}
+
 	if hasExon && !hasIntron && exons > 0 {
 		st[Exon]++
 		return
@@ -190,16 +192,16 @@ func (s *CoverageStats) Collect(record *sam.Record) {
 	elements := map[string]uint8{}
 	for _, mappingLocation := range record.GetBlocks() {
 		rtree := s.index.Get(mappingLocation.Chrom())
-		if rtree.Size() == 0 {
+		if rtree == nil || rtree.Size() == 0 {
 			return
 		}
 		results := annotation.QueryIndex(rtree, mappingLocation.Start(), mappingLocation.End())
 		mappingLocation.GetElements(&results, elements)
 	}
 	if record.IsSplit() {
-		updateCount(record, elements, s.Split)
+		updateCount(elements, s.Split)
 	} else {
-		updateCount(record, elements, s.Continuous)
+		updateCount(elements, s.Continuous)
 	}
 }
 

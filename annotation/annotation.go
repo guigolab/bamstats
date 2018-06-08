@@ -24,9 +24,6 @@ type chunk struct {
 
 // Get returns the pointer to an Rtree for the specified chromosome and create a new Rtree if not present.
 func (t RtreeMap) Get(chr string) *rtreego.Rtree {
-	if _, ok := t[chr]; !ok {
-		t[chr] = rtreego.NewTree(1, 25, 50)
-	}
 	return t[chr]
 }
 

@@ -13,8 +13,8 @@ type Location struct {
 }
 
 // NewLocation returns a new Location instance
-func NewLocation(chrom string, start, end float64) *Location {
-	return &Location{chrom, start, end}
+func NewLocation(chrom string, start, end int) *Location {
+	return &Location{chrom, float64(start), float64(end)}
 }
 
 // Chrom returns the location chromosome
