@@ -60,7 +60,7 @@ chr14	29533	30039	exon
 chr15	30266	30667	exon
 chr16	30975	31109	exon
 `)
-	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), nil)
+	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}))
 	l := index.Len()
 	isTab := func(c rune) bool {
 		return c == '\n'
@@ -122,7 +122,7 @@ chr1	30266	30667	exon
 chr1	30667	30975	intron
 chr1	30975	31109	exon
 `)
-	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), nil)
+	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}))
 	for _, item := range []struct {
 		query          Location
 		expectedLength int
@@ -249,7 +249,7 @@ chr16	30975	31109	exon
 `)
 	logrus.SetLevel(logrus.DebugLevel) // set debug level
 	debugElementsFile = ".test.debug.elfile.bed"
-	_ = createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), nil)
+	_ = createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}))
 	e, err := ioutil.ReadFile(debugElementsFile)
 	if os.IsNotExist(err) {
 		t.Fatal("(createIndex) Debug elements file not found")

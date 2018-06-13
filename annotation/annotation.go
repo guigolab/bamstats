@@ -187,7 +187,7 @@ func updateIndex(index *rtreego.Rtree, length float64, feature, updated string, 
 	w.Flush()
 }
 
-func createTree(trees *RtreeMap, chr string, length int, feats chan rtreego.Spatial, wg *sync.WaitGroup) {
+func createTree(trees *RtreeMap, chr string, length float64, feats chan rtreego.Spatial, wg *sync.WaitGroup) {
 	wg.Add(1)
 	chan2slice := func(c chan rtreego.Spatial) []rtreego.Spatial {
 		var s []rtreego.Spatial
@@ -199,8 +199,8 @@ func createTree(trees *RtreeMap, chr string, length int, feats chan rtreego.Spat
 	fs := chan2slice(feats)
 	trees.Store(chr, rtreego.NewTree(1, 25, 50, fs...))
 	if length > 0 {
-		updateIndex(trees.Get(chr), float64(length), "gene", "intergenic", true)
-		updateIndex(trees.Get(chr), float64(length), "exon", "intron", false)
+		updateIndex(trees.Get(chr), length, "gene", "intergenic", true)
+		updateIndex(trees.Get(chr), length, "exon", "intron", false)
 	}
 	wg.Done()
 }
@@ -226,10 +226,10 @@ func CreateIndex(annoFile, bamFile string, cpu int) *RtreeMap {
 	chrLens := getChrLens(bamFile, cpu)
 	scanner := NewScanner(f, chrLens)
 
-	return createIndex(scanner, chrLens)
+	return createIndex(scanner)
 }
 
-func createIndex(scanner *Scanner, chrLens map[string]int) *RtreeMap {
+func createIndex(scanner *Scanner) *RtreeMap {
 	var trees RtreeMap
 	regions := make(chan chunk)
 	debugElements := make(chan string)
@@ -242,7 +242,10 @@ func createIndex(scanner *Scanner, chrLens map[string]int) *RtreeMap {
 
 	var wg sync.WaitGroup
 	for chunk := range regions {
-		go createTree(&trees, chunk.chr, chrLens[chunk.chr], chunk.feats, &wg)
+		chr := chunk.chr
+		feats := chunk.feats
+		length := float64(scanner.r.chrLens[chr])
+		go createTree(&trees, chr, length, feats, &wg)
 	}
 	wg.Wait()
 
