@@ -42,7 +42,7 @@
   branch = "master"
   name = "github.com/dhconnelly/rtreego"
   packages = ["."]
-  revision = "1323b09fe8f32430ea7e16ea1df99e106e3e6250"
+  revision = "3fb2815d35b271e8c46328dbd6ca22f548ceb6dc"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"

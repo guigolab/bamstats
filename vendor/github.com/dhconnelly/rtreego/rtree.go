@@ -88,48 +88,15 @@ func (s *dimSorter) Less(i, j int) bool {
 	return s.objs[i].bb.p[s.dim] < s.objs[j].bb.p[s.dim]
 }
 
-// splitByM splits objects into slices of maximum m elements.
-// Split 10 in to 3 will yield 3 + 3 + 3 + 1
-func splitByM(m int, objs []entry) [][]entry {
-	perSlice := len(objs) / m
+// walkPartitions splits objs into slices of maximum k elements and
+// iterates over these partitions.
+func walkPartitions(k int, objs []entry, iter func(parts []entry)) {
+	n := (len(objs) + k - 1) / k // ceil(len(objs) / k)
 
-	numSlices := m
-	if len(objs)%m != 0 {
-		numSlices++
+	for i := 1; i < n; i++ {
+		iter(objs[(i-1)*k : i*k])
 	}
-
-	split := make([][]entry, numSlices)
-	for i := 0; i < numSlices; i++ {
-		if i == numSlices-1 {
-			split[i] = objs[i*perSlice:]
-			break
-		}
-
-		split[i] = objs[i*perSlice : i*perSlice+perSlice]
-	}
-
-	return split
-}
-
-// splitInS splits objects into s slices and puts the left over elements in the
-// last slice.
-// Split 10 in to 3 will yield 3 + 3 + 4
-func splitInS(s int, objs []entry) [][]entry {
-	split := splitByM(s, objs)
-	if len(split) < 2 {
-		return split
-	}
-
-	last := split[len(split)-1]
-	secondLast := split[len(split)-2]
-
-	if len(last) < len(secondLast) {
-		merged := append(secondLast, last...)
-		split = split[:len(split)-1]
-		split[len(split)-1] = merged
-	}
-
-	return split
+	iter(objs[(n-1)*k:])
 }
 
 func sortByDim(dim int, objs []entry) {
@@ -150,37 +117,52 @@ func (tree *Rtree) bulkLoad(objs []Spatial) {
 		}
 	}
 
-	// root will never be a leaf in the bulk-loaded tree
-	tree.root.leaf = false
-	tree.size = n
 	// following equations are defined in the paper describing OMT
-	tree.height = int(math.Ceil(math.Log(float64(n)) / float64(math.Log(float64(tree.MaxChildren)))))
-	tree.root.level = tree.height
-	nsub := int(math.Pow(float64(tree.MaxChildren), float64(tree.height-1)))
-	s := int(math.Floor(math.Sqrt(math.Ceil(float64(n) / float64(nsub)))))
+	var (
+		N = float64(n)
+		M = float64(tree.MaxChildren)
+	)
+	// Eq1: height of the tree
+	// use log2 instead of log due to rounding errors with log,
+	// eg, math.Log(9) / math.Log(3) > 2
+	h := math.Ceil(math.Log2(N) / math.Log2(M))
 
+	// Eq2: size of subtrees at the root
+	nsub := math.Pow(M, h-1)
+
+	// Inner Eq3: number of subtrees at the root
+	s := math.Ceil(N / nsub)
+
+	// Eq3: number of slices
+	S := math.Floor(math.Sqrt(s))
+
+	// sort all entries by first dimension
 	sortByDim(0, entries)
 
-	// we can preallocate entries here as we know the root will always be
-	// split into s groups
-	tree.root.entries = make([]entry, s)
-
-	// build the root first as we have to split it differently from the subtrees
-	for i, part := range splitInS(s, entries) {
-		child := tree.omt(tree.root.level-1, part, tree.MaxChildren)
-		child.parent = tree.root
-
-		tree.root.entries[i].bb = child.computeBoundingBox()
-		tree.root.entries[i].child = child
-	}
+	tree.height = int(h)
+	tree.size = n
+	tree.root = tree.omt(int(h), int(S), entries, int(s))
 }
 
-// omt the is the recursive part of the Overlap Minimizing Top-loading bulk-
+// omt is the recursive part of the Overlap Minimizing Top-loading bulk-
 // load approach. Returns the root node of a subtree.
-func (tree *Rtree) omt(level int, objs []entry, m int) *node {
+func (tree *Rtree) omt(level, nSlices int, objs []entry, m int) *node {
 	// if number of objects is less than or equal than max children per leaf,
 	// we need to create a leaf node
 	if len(objs) <= m {
+		// as long as the recursion is not at the leaf, call it again
+		if level > 1 {
+			child := tree.omt(level-1, nSlices, objs, m)
+			n := &node{
+				level: level,
+				entries: []entry{{
+					bb:    child.computeBoundingBox(),
+					child: child,
+				}},
+			}
+			child.parent = n
+			return n
+		}
 		return &node{
 			leaf:    true,
 			entries: objs,
@@ -188,25 +170,37 @@ func (tree *Rtree) omt(level int, objs []entry, m int) *node {
 		}
 	}
 
-	// sort the tree on every level by a different dimension than the previous
-	// level, this will prevent overlapping of the branches
-	sortByDim((tree.height-level)%tree.Dim, objs)
-
 	n := &node{
 		level:   level,
 		entries: make([]entry, 0, m),
 	}
 
-	for _, part := range splitByM(m, objs) {
-		child := tree.omt(level-1, part, m)
-		child.parent = n
+	// maximum node size given at most M nodes at this level
+	k := (len(objs) + m - 1) / m // = ceil(N / M)
 
-		n.entries = append(n.entries, entry{
-			bb:    child.computeBoundingBox(),
-			child: child,
-		})
+	// In the root level, split objs in nSlices. In all other levels,
+	// we use a single slice.
+	vertSize := len(objs)
+	if nSlices > 1 {
+		vertSize = nSlices * k
 	}
 
+	// create sub trees
+	walkPartitions(vertSize, objs, func(vert []entry) {
+		// sort vertical slice by a different dimension on every level
+		sortByDim((tree.height-level+1)%tree.Dim, vert)
+
+		// split slice into groups of size k
+		walkPartitions(k, vert, func(part []entry) {
+			child := tree.omt(level-1, 1, part, tree.MaxChildren)
+			child.parent = n
+
+			n.entries = append(n.entries, entry{
+				bb:    child.computeBoundingBox(),
+				child: child,
+			})
+		})
+	})
 	return n
 }
 
@@ -688,6 +682,14 @@ func (s entrySlice) Less(i, j int) bool {
 func sortEntries(p Point, entries []entry) ([]entry, []float64) {
 	sorted := make([]entry, len(entries))
 	dists := make([]float64, len(entries))
+	return sortPreallocEntries(p, entries, sorted, dists)
+}
+
+func sortPreallocEntries(p Point, entries, sorted []entry, dists []float64) ([]entry, []float64) {
+	// use preallocated slices
+	sorted = sorted[:len(entries)]
+	dists = dists[:len(entries)]
+
 	for i := 0; i < len(entries); i++ {
 		sorted[i] = entries[i]
 		dists[i] = p.minDist(entries[i].bb)
@@ -750,9 +752,17 @@ func (tree *Rtree) nearestNeighbor(p Point, n *node, d float64, nearest Spatial)
 
 // NearestNeighbors gets the closest Spatials to the Point.
 func (tree *Rtree) NearestNeighbors(k int, p Point, filters ...Filter) []Spatial {
+	// preallocate the buffers for sortings the branches. At each level of the
+	// tree, we slide the buffer by the number of entries in the node.
+	maxBufSize := tree.MaxChildren * tree.Depth()
+	branches := make([]entry, maxBufSize)
+	branchDists := make([]float64, maxBufSize)
+
+	// allocate the buffers for the results
 	dists := make([]float64, 0, k)
 	objs := make([]Spatial, 0, k)
-	objs, _, _ = tree.nearestNeighbors(k, p, tree.root, dists, objs, filters)
+
+	objs, _, _ = tree.nearestNeighbors(k, p, tree.root, dists, objs, filters, branches, branchDists)
 	return objs
 }
 
@@ -789,7 +799,7 @@ func insertNearest(k int, dists []float64, nearest []Spatial, dist float64, obj 
 	return dists, nearest, false
 }
 
-func (tree *Rtree) nearestNeighbors(k int, p Point, n *node, dists []float64, nearest []Spatial, filters []Filter) ([]Spatial, []float64, bool) {
+func (tree *Rtree) nearestNeighbors(k int, p Point, n *node, dists []float64, nearest []Spatial, filters []Filter, b []entry, bd []float64) ([]Spatial, []float64, bool) {
 	var abort bool
 	if n.leaf {
 		for _, e := range n.entries {
@@ -800,13 +810,13 @@ func (tree *Rtree) nearestNeighbors(k int, p Point, n *node, dists []float64, ne
 			}
 		}
 	} else {
-		branches, branchDists := sortEntries(p, n.entries)
+		branches, branchDists := sortPreallocEntries(p, n.entries, b, bd)
 		// only prune if buffer has k elements
 		if l := len(dists); l >= k {
 			branches = pruneEntriesMinDist(dists[l-1], branches, branchDists)
 		}
 		for _, e := range branches {
-			nearest, dists, abort = tree.nearestNeighbors(k, p, e.child, dists, nearest, filters)
+			nearest, dists, abort = tree.nearestNeighbors(k, p, e.child, dists, nearest, filters, b[len(n.entries):], bd[len(n.entries):])
 			if abort {
 				break
 			}
