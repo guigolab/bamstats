@@ -9,11 +9,9 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"sort"
 	"strconv"
 	"unsafe"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/dhconnelly/rtreego"
 	"github.com/guigolab/bamstats/utils"
 )
@@ -202,81 +200,17 @@ func readBed(r *FeatureReader) (f *Feature, err error) {
 	return parseFeature(chr, element, s, e)
 }
 
-func selectFeature(f *Feature, list *[3]*Feature, element []byte, extremes bool, chrLens map[string]int) (feat *Feature, err error) {
-	if (*list)[0] != nil && ((*list)[1] == nil || (*list)[0].Chr() != (*list)[1].Chr()) {
-		if extremes {
-			feat, err = parseFeature([]byte(f.Chr()), element, f.End(), float64(chrLens[f.Chr()]))
-			(*list)[0] = nil // previous <- nil
-			return
-		}
-		(*list)[0] = nil // previous <- nil
-	}
-	if (*list)[0] != nil {
-		// return new element between previous and current
-		feat, err = parseFeature([]byte(f.Chr()), element, (*list)[0].End(), (*list)[1].Start())
-		(*list)[2] = (*list)[1] // next <- current
-		(*list)[1] = f          // current <- feature just read
-		(*list)[0] = nil        // no previous
-
-	} else {
-		if extremes && isFirst(*list) && (*list)[1] != nil && (*list)[1].Start() > 0 {
-			// return new element between 0 and current
-			feat, err = parseFeature([]byte(f.Chr()), element, 0, (*list)[1].Start())
-			(*list)[2] = (*list)[1] // next <- current
-			(*list)[1] = f          // current <- feature just read
-			(*list)[0] = nil        // no previous
-		} else {
-			(*list)[0] = (*list)[1]          // previous <- current
-			feat, (*list)[1] = (*list)[1], f // return current, current <- feature just read
-		}
-	}
-	return
-}
-
-func isFirst(list [3]*Feature) bool {
-	return list[0] == nil && list[2] == nil
-}
-
 func readGtf(r *FeatureReader) (f *Feature, err error) {
 	var line []byte
 	var fields [][]byte
 	var element []byte
 	for {
-		if r.genes[2] != nil {
-			f, r.genes[2], r.genes[0], err = r.genes[2], nil, r.genes[2], nil
-			if r.genes[1] == nil || r.genes[1].Chr() != r.genes[0].Chr() {
-				f, err = selectFeature(r.genes[0], &r.genes, []byte("intergenic"), true, r.chrLens)
-			}
-			break
-		}
-		if r.exons[2] != nil {
-			f, r.exons[2], r.exons[0], err = r.exons[2], nil, r.exons[2], nil
-			if r.exons[1] != nil && r.exons[1].Chr() != r.exons[0].Chr() {
-				r.exons[0] = nil
-			}
-			break
-		}
 		line, err = r.r.ReadBytes('\n')
 		//r.line++
 		if err != nil {
 			if err == io.EOF {
-				if r.genes[1] != nil {
-					f, err = selectFeature(r.genes[1], &r.genes, []byte("intergenic"), true, r.chrLens)
-					r.genes[1] = nil
 					break
 				}
-				if r.exons[1] != nil {
-					f, err = selectFeature(r.exons[1], &r.exons, []byte("intron"), false, r.chrLens)
-					if f.Element() == "intron" && r.genes[0] != nil && r.genes[1] != nil {
-						if f.Start() == r.genes[0].End() || f.End() == r.genes[1].Start() || f.End() == r.genes[0].Start() {
-							f = nil
-						}
-					}
-					r.exons[1] = nil
-					break
-				}
-				return
-			}
 			return nil, &csv.ParseError{Err: err}
 		}
 		line = bytes.TrimSpace(line)
@@ -284,6 +218,10 @@ func readGtf(r *FeatureReader) (f *Feature, err error) {
 			continue
 		} else {
 			fields = bytes.Split(line, []byte{'\t'})
+			elem := string(fields[2])
+			if elem != "gene" && elem != "exon" {
+				continue
+			}
 			element = fields[2]
 			chr := fields[0]
 			start := fields[3]

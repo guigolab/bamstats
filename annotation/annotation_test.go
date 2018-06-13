@@ -13,6 +13,35 @@ import (
 	"github.com/dhconnelly/rtreego"
 )
 
+func TestParseFeature(t *testing.T) {
+	e := bytes.Split([]byte(`chr1	11868	12227	exon`), []byte("\t"))
+	chr := e[0]
+	elem := e[3]
+	start, end := parseInterval(e[1], e[2])
+	if start != float64(11868) {
+		t.Errorf("(parseInterval) expected %s, got %v", e[1], start)
+	}
+	if end != float64(12227) {
+		t.Errorf("(parseInterval) expected %s, got %v", e[2], end)
+	}
+	f, err := parseFeature(chr, elem, start, end)
+	if err != nil {
+		t.Errorf("(parseFeature) Got error: %s", err)
+	}
+	if f.Chr() != "chr1" {
+		t.Errorf("(parseFeature) expected chromosome %s, got %v", "chr1", f.Chr())
+	}
+	if f.Element() != "exon" {
+		t.Errorf("(parseFeature) expected element %s, got %v", "exon", f.Chr())
+	}
+	if f.Start() != 11868 {
+		t.Errorf("(parseFeature) expected start %d, got %v", 11868, f.Start())
+	}
+	if f.End() != 12227 {
+		t.Errorf("(parseFeature) expected end %d, got %v", 12227, f.End())
+	}
+}
+
 func TestCreateIndex(t *testing.T) {
 	elements := []byte(`chr1	11868	12227	exon
 chr2	12612	12721	exon
@@ -31,8 +60,8 @@ chr14	29533	30039	exon
 chr15	30266	30667	exon
 chr16	30975	31109	exon
 `)
-	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), 1)
-	l := len(*index)
+	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), nil)
+	l := index.Len()
 	isTab := func(c rune) bool {
 		return c == '\n'
 	}
@@ -40,7 +69,9 @@ chr16	30975	31109	exon
 	if l != expLen {
 		t.Errorf("(createIndex) expected length %v, got %v", expLen, l)
 	}
-	for key, value := range *index {
+	index.Range(func(k, v interface{}) bool {
+		key := k.(string)
+		value := v.(*rtreego.Rtree)
 		typeString := fmt.Sprintf("%T", value)
 		if typeString != "*rtreego.Rtree" {
 			t.Errorf("(createIndex) expected *rtreego.Rtree, got %v", typeString)
@@ -53,7 +84,8 @@ chr16	30975	31109	exon
 		if indexSize != 1 {
 			t.Errorf("(createIndex) expected one value per chromosome, got %v", indexSize)
 		}
-	}
+		return true
+	})
 }
 
 func TestQueryIndex(t *testing.T) {
@@ -90,7 +122,7 @@ chr1	30266	30667	exon
 chr1	30667	30975	intron
 chr1	30975	31109	exon
 `)
-	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), 1)
+	index := createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), nil)
 	for _, item := range []struct {
 		query          Location
 		expectedLength int
@@ -217,7 +249,7 @@ chr16	30975	31109	exon
 `)
 	logrus.SetLevel(logrus.DebugLevel) // set debug level
 	debugElementsFile = ".test.debug.elfile.bed"
-	_ = createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), 1)
+	_ = createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}), nil)
 	e, err := ioutil.ReadFile(debugElementsFile)
 	if os.IsNotExist(err) {
 		t.Fatal("(createIndex) Debug elements file not found")
