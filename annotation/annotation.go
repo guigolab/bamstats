@@ -121,19 +121,8 @@ func mergeIntervals(intervals []*Feature) []*Feature {
 }
 
 func updateIndex(index *rtreego.Rtree, length float64, feature, updated string, extremes bool) {
-	elemFilter := func(elem string) rtreego.Filter {
-		return func(results []rtreego.Spatial, object rtreego.Spatial) (refuse, abort bool) {
-			f := object.(*Feature)
-			if f.Element() != elem {
-				return true, false
-			}
 
-			return false, false
-		}
-	}
-
-	r, _ := rtreego.NewRect(rtreego.Point{0}, []float64{length})
-	features := index.SearchIntersect(r, elemFilter(feature))
+	features := QueryIndexByElement(index, 0, length, feature)
 
 	var w *bufio.Writer
 	var out *os.File
@@ -245,4 +234,25 @@ func QueryIndex(index *rtreego.Rtree, begin, end float64) []rtreego.Spatial {
 
 	// Get a slice of the objects in rt that intersect bb:
 	return index.SearchIntersect(bb)
+}
+
+// QueryIndexByElement perform a SearchIntersect on the specified index given a start and end position and an element.
+func QueryIndexByElement(index *rtreego.Rtree, begin, end float64, element string) []rtreego.Spatial {
+	elementFilter := func(elem string) rtreego.Filter {
+		return func(results []rtreego.Spatial, object rtreego.Spatial) (refuse, abort bool) {
+			f := object.(*Feature)
+			if f.Element() != elem {
+				return true, false
+			}
+
+			return false, false
+		}
+	}
+
+	size := end - begin
+	// Create the bounding box for the query:
+	bb, _ := rtreego.NewRect(rtreego.Point{begin}, []float64{size})
+
+	// Get a slice of the objects in rt that intersect bb:
+	return index.SearchIntersect(bb, elementFilter(element))
 }
