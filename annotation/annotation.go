@@ -156,14 +156,14 @@ func updateIndex(index *rtreego.Rtree, start, end float64, feature, updated stri
 		return index
 	}
 
-	newIndex := rtreego.NewTree(1, 25, 50)
+	var features []rtreego.Spatial
 	for _, f := range interleaveFeatures(index, start, end, feature, []byte(updated), extremes) {
-		newIndex.Insert(f)
+		features = append(features, f)
 		for _, g := range interleaveFeatures(index, f.Start(), f.End(), "exon", []byte("intron"), false) {
-			newIndex.Insert(g)
+			features = append(features, g)
 		}
 	}
-	return newIndex
+	return rtreego.NewTree(1, 25, 50, features...)
 }
 
 func chan2slice(c chan rtreego.Spatial) []rtreego.Spatial {
