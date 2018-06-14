@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/biogo/hts/bam"
 	"github.com/dhconnelly/rtreego"
 	"github.com/guigolab/bamstats/utils"
 )
@@ -205,25 +204,11 @@ func createTree(trees *RtreeMap, chr string, length float64, feats chan rtreego.
 	wg.Done()
 }
 
-func getChrLens(bamFile string, cpu int) (chrs map[string]int) {
-	bf, err := os.Open(bamFile)
-	utils.Check(err)
-	br, err := bam.NewReader(bf, cpu)
-	utils.Check(err)
-	refs := br.Header().Refs()
-	chrs = make(map[string]int, len(refs))
-	for _, r := range refs {
-		chrs[r.Name()] = r.Len()
-	}
-	return
-}
-
 // CreateIndex creates the Rtree indices for the specified annotation file. It builds a Rtree
 // for each chromosome and returns a RtreeMap having the chromosome names as keys.
-func CreateIndex(annoFile, bamFile string, cpu int) *RtreeMap {
+func CreateIndex(annoFile string, chrLens map[string]int) *RtreeMap {
 	f, err := os.Open(annoFile)
 	utils.Check(err)
-	chrLens := getChrLens(bamFile, cpu)
 	scanner := NewScanner(f, chrLens)
 
 	return createIndex(scanner)

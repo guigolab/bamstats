@@ -2,10 +2,12 @@
 package bamstats
 
 import (
+	"os"
 	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/biogo/hts/bam"
 	"github.com/guigolab/bamstats/annotation"
 	"github.com/guigolab/bamstats/config"
 	"github.com/guigolab/bamstats/sam"
@@ -95,13 +97,27 @@ func waitProcess(st chan stats.Map, wg *sync.WaitGroup) {
 	close(st)
 }
 
+func getChrLens(bamFile string, cpu int) (chrs map[string]int) {
+	bf, err := os.Open(bamFile)
+	utils.Check(err)
+	br, err := bam.NewReader(bf, cpu)
+	utils.Check(err)
+	refs := br.Header().Refs()
+	chrs = make(map[string]int, len(refs))
+	for _, r := range refs {
+		chrs[r.Name()] = r.Len()
+	}
+	return
+}
+
 // Process process the input BAM file and collect different mapping stats.
 func Process(bamFile string, anno string, cpu int, maxBuf int, reads int, uniq bool) (stats.Map, error) {
 	var index *annotation.RtreeMap
 	if anno != "" {
 		log.Infof("Creating index for %s", anno)
 		start := time.Now()
-		index = annotation.CreateIndex(anno, bamFile, cpu)
+		chrLens := getChrLens(bamFile, cpu)
+		index = annotation.CreateIndex(anno, chrLens)
 		log.Infof("Index done in %v", time.Since(start))
 	}
 	start := time.Now()
