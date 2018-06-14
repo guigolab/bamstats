@@ -94,24 +94,30 @@ func writeElements(items <-chan string) {
 	w.Flush()
 }
 
-func mergeIntervals(intervals []*Feature) []*Feature {
-	sort.Sort(FeatureSlice(intervals))
-	out := make([]*Feature, 0)
-	x, intervals := intervals[0], intervals[1:]
+func mergeIntervals(intervals []rtreego.Spatial) []*Feature {
+	sort.Sort(NewFeatureSlice(intervals))
+	var out []*Feature
+	var x *Feature
 	for n, i := range intervals {
-		if i.Start() <= x.End() {
-			start := math.Min(x.Start(), i.Start())
-			end := math.Max(i.End(), x.End())
-			loc := rtreego.Point{start}
-			size := end - start
-			rect, err := rtreego.NewRect(loc, []float64{size})
-			if err != nil {
-				log.Panic(err)
+		f := i.(*Feature)
+		if n == 0 {
+			x = f
+		}
+		if n > 0 {
+			if f.Start() <= x.End() {
+				start := math.Min(x.Start(), f.Start())
+				end := math.Max(f.End(), x.End())
+				loc := rtreego.Point{start}
+				size := end - start
+				rect, err := rtreego.NewRect(loc, []float64{size})
+				if err != nil {
+					log.Panic(err)
+				}
+				x.SetBounds(rect)
+			} else {
+				out = append(out, x)
+				x = f
 			}
-			x.SetBounds(rect)
-		} else {
-			out = append(out, x)
-			x = i
 		}
 		if n == len(intervals)-1 {
 			out = append(out, x)
@@ -120,76 +126,59 @@ func mergeIntervals(intervals []*Feature) []*Feature {
 	return out
 }
 
-func updateIndex(index *rtreego.Rtree, length float64, feature, updated string, extremes bool) {
-
-	features := QueryIndexByElement(index, 0, length, feature)
-
-	var w *bufio.Writer
-	var out *os.File
-	if feature == "gene" {
-		out, _ = os.Create(debugElementsFile)
-	} else {
-		out, _ = os.OpenFile(debugElementsFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	}
-	w = bufio.NewWriter(out)
-	logrus.Debugf("Writing %s elements to %s", feature, out.Name())
-
-	debPrint := func(f *Feature) {
-		w.WriteString(f.Out())
-		w.WriteRune('\n')
-	}
-
-	convert := func(s []rtreego.Spatial) []*Feature {
-		var f []*Feature
-		for _, i := range s {
-			f = append(f, i.(*Feature))
-		}
-		return f
-	}
-
-	merged := mergeIntervals(convert(features))
+func interleaveFeatures(tree *rtreego.Rtree, start, end float64, element string, updated []byte, extremes bool) []*Feature {
+	features := QueryIndexByElement(tree, start, end, element)
+	merged := mergeIntervals(features)
+	var fs []*Feature
 	for i, f := range merged {
-		debPrint(f)
+		fs = append(fs, f)
 		if extremes {
 			if i == 0 {
-				n, _ := parseFeature(f.chr, []byte(updated), 0, f.Start())
-				debPrint(n)
-				index.Insert(n)
+				n, _ := parseFeature(f.chr, updated, start, f.Start())
+				fs = append(fs, n)
 			}
 			if i == len(merged)-1 {
-				n, _ := parseFeature(f.chr, []byte(updated), f.End(), length)
-				debPrint(n)
-				index.Insert(n)
+				n, _ := parseFeature(f.chr, updated, f.End(), end)
+				fs = append(fs, n)
 			}
 		}
 		if i > 0 {
 			g := merged[i-1]
-			// if feature == "exon" && f.Tag("gene_id") != g.Tag("gene_id") {
-			// 	continue
-			// }
-			n, _ := parseFeature(f.chr, []byte(updated), g.End(), f.Start())
-			debPrint(n)
-			index.Insert(n)
+			n, _ := parseFeature(f.chr, updated, g.End(), f.Start())
+			fs = append(fs, n)
 		}
 	}
-	w.Flush()
+	return fs
+}
+
+func updateIndex(index *rtreego.Rtree, start, end float64, feature, updated string, extremes bool) *rtreego.Rtree {
+	if end-start <= 0 {
+		return index
+	}
+
+	newIndex := rtreego.NewTree(1, 25, 50)
+	for _, f := range interleaveFeatures(index, start, end, feature, []byte(updated), extremes) {
+		newIndex.Insert(f)
+		for _, g := range interleaveFeatures(index, f.Start(), f.End(), "exon", []byte("intron"), false) {
+			newIndex.Insert(g)
+		}
+	}
+	return newIndex
+}
+
+func chan2slice(c chan rtreego.Spatial) []rtreego.Spatial {
+	var s []rtreego.Spatial
+	for item := range c {
+		s = append(s, item)
+	}
+	return s
 }
 
 func createTree(trees *RtreeMap, chr string, length float64, feats chan rtreego.Spatial, wg *sync.WaitGroup) {
 	wg.Add(1)
-	chan2slice := func(c chan rtreego.Spatial) []rtreego.Spatial {
-		var s []rtreego.Spatial
-		for item := range c {
-			s = append(s, item)
-		}
-		return s
-	}
-	fs := chan2slice(feats)
-	trees.Store(chr, rtreego.NewTree(1, 25, 50, fs...))
-	if length > 0 {
-		updateIndex(trees.Get(chr), length, "gene", "intergenic", true)
-		updateIndex(trees.Get(chr), length, "exon", "intron", false)
-	}
+	tmpIndex := rtreego.NewTree(1, 25, 50, chan2slice(feats)...)
+	index := updateIndex(tmpIndex, 0, length, "gene", "intergenic", true)
+	trees.Store(chr, index)
 	wg.Done()
 }
 

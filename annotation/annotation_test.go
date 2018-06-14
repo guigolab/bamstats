@@ -149,7 +149,7 @@ func newRect(point rtreego.Point, size []float64, t *testing.T) *rtreego.Rect {
 func TestMergeIntervals(t *testing.T) {
 	chr := []byte("chr1")
 	element := []byte("exon")
-	elements := []*Feature{
+	elements := []rtreego.Spatial{
 		&Feature{
 			chr:      chr,
 			element:  element,
@@ -261,4 +261,37 @@ chr16	30975	31109	exon
 		t.Fatalf("(createIndex) Debug elements file contents do not match the expected value")
 	}
 	os.Remove(debugElementsFile)
+}
+
+func TestReadFeatures(t *testing.T) {
+	files := []string{"../data/coverage-test.bed", "../data/coverage-test.gtf.gz"}
+	chrLens := map[string]int{
+		"chr1": 248956422,
+	}
+
+	elems := map[string]int{
+		"exon":       29431,
+		"gene":       3201,
+		"intergenic": 3202,
+		"intron":     26230,
+	}
+
+	for _, f := range files {
+		m := CreateIndex(f, chrLens)
+		i, ok := m.Load("chr1")
+		index := i.(*rtreego.Rtree)
+		if !ok {
+			t.Errorf("(%s) Error loading index", t.Name())
+		}
+		res := make(map[string]int)
+		for _, s := range QueryIndex(index, 0, 248956422) {
+			f := s.(*Feature)
+			res[f.Element()]++
+		}
+		for k, v := range elems {
+			if v != res[k] {
+				t.Errorf("(%s) Different number of %s features. Expected: %d, got %d", t.Name(), k, v, res[k])
+			}
+		}
+	}
 }

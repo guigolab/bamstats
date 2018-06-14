@@ -19,6 +19,15 @@ func (s FeatureSlice) Less(i, j int) bool {
 	return s[i].Start() < s[j].Start()
 }
 
+// NewFeatureSlice returns a new FeatureSlice instance from a slice of rtreego.Spatial
+func NewFeatureSlice(intervals []rtreego.Spatial) FeatureSlice {
+	var fs FeatureSlice
+	for _, i := range intervals {
+		fs = append(fs, i.(*Feature))
+	}
+	return fs
+}
+
 // Feature represents an annotated element.
 type Feature struct {
 	location     *rtreego.Rect
