@@ -21,7 +21,7 @@ var (
 	expectedGeneralJSON      = "data/expected-general.json"
 	expectedCoverageJSON     = "data/expected-coverage.json"
 	expectedCoverageUniqJSON = "data/expected-coverage-uniq.json"
-	annotationFiles          = []string{"data/coverage-test.bed", "data/coverage-test.gtf.gz"}
+	annotationFiles          = []string{"data/coverage-test.bed", "data/coverage-test.gtf.gz", "data/coverage-test-shuffled.bed", "data/coverage-test-shuffled.gtf.gz"}
 	maxBuf                   = 1000000
 	reads                    = -1
 )

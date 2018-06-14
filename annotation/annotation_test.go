@@ -13,6 +13,10 @@ import (
 	"github.com/dhconnelly/rtreego"
 )
 
+var (
+	annotationFiles = []string{"../data/coverage-test.bed", "../data/coverage-test.gtf.gz", "../data/coverage-test-shuffled.bed", "../data/coverage-test-shuffled.gtf.gz"}
+)
+
 func TestParseFeature(t *testing.T) {
 	e := bytes.Split([]byte(`chr1	11868	12227	exon`), []byte("\t"))
 	chr := e[0]
@@ -264,7 +268,6 @@ chr16	30975	31109	exon
 }
 
 func TestReadFeatures(t *testing.T) {
-	files := []string{"../data/coverage-test.bed", "../data/coverage-test.gtf.gz"}
 	chrLens := map[string]int{
 		"chr1": 248956422,
 	}
@@ -276,7 +279,7 @@ func TestReadFeatures(t *testing.T) {
 		"intron":     26230,
 	}
 
-	for _, f := range files {
+	for _, f := range annotationFiles {
 		m := CreateIndex(f, chrLens)
 		i, ok := m.Load("chr1")
 		index := i.(*rtreego.Rtree)
