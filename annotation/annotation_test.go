@@ -73,9 +73,7 @@ chr16	30975	31109	exon
 	if l != expLen {
 		t.Errorf("(createIndex) expected length %v, got %v", expLen, l)
 	}
-	index.Range(func(k, v interface{}) bool {
-		key := k.(string)
-		value := v.(*rtreego.Rtree)
+	for key, value := range *index {
 		typeString := fmt.Sprintf("%T", value)
 		if typeString != "*rtreego.Rtree" {
 			t.Errorf("(createIndex) expected *rtreego.Rtree, got %v", typeString)
@@ -88,8 +86,7 @@ chr16	30975	31109	exon
 		if indexSize != 1 {
 			t.Errorf("(createIndex) expected one value per chromosome, got %v", indexSize)
 		}
-		return true
-	})
+	}
 }
 
 func TestQueryIndex(t *testing.T) {
@@ -281,11 +278,7 @@ func TestReadFeatures(t *testing.T) {
 
 	for _, f := range annotationFiles {
 		m := CreateIndex(f, chrLens)
-		i, ok := m.Load("chr1")
-		index := i.(*rtreego.Rtree)
-		if !ok {
-			t.Errorf("(%s) Error loading index", t.Name())
-		}
+		index := m.Get("chr1")
 		res := make(map[string]int)
 		for _, s := range QueryIndex(index, 0, 248956422) {
 			f := s.(*Feature)

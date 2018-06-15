@@ -24,28 +24,25 @@ type chunk struct {
 
 // RtreeMap is a map of pointers to Rtree with string keys.
 // type RtreeMap map[string]*rtreego.Rtree
-type RtreeMap struct {
-	sync.Map
+type RtreeMap map[string]*rtreego.Rtree
+
+type tree struct {
+	chr  string
+	tree *rtreego.Rtree
 }
 
 // Get returns the pointer to an Rtree for the specified chromosome and create a new Rtree if not present.
-func (t *RtreeMap) Get(chr string) *rtreego.Rtree {
-	v, ok := t.Load(chr)
+func (t RtreeMap) Get(chr string) *rtreego.Rtree {
+	v, ok := t[chr]
 	if ok {
-		return v.(*rtreego.Rtree)
+		return v
 	}
 	return nil
 }
 
 // Len returns the number of elements in the map.
-func (t *RtreeMap) Len() int {
-	var length int
-	t.Range(func(_, _ interface{}) bool {
-		length++
-
-		return true
-	})
-	return length
+func (t RtreeMap) Len() int {
+	return len(t)
 }
 
 func scan(scanner *Scanner, regions chan chunk, elems chan string) {
@@ -174,11 +171,10 @@ func chan2slice(c chan rtreego.Spatial) []rtreego.Spatial {
 	return s
 }
 
-func createTree(trees *RtreeMap, chr string, length float64, feats chan rtreego.Spatial, wg *sync.WaitGroup) {
+func createTree(trees chan *tree, chr string, length float64, feats chan rtreego.Spatial, wg *sync.WaitGroup) {
 	wg.Add(1)
 	tmpIndex := rtreego.NewTree(1, 25, 50, chan2slice(feats)...)
-	index := updateIndex(tmpIndex, 0, length, "gene", "intergenic", true)
-	trees.Store(chr, index)
+	trees <- &tree{chr, updateIndex(tmpIndex, 0, length, "gene", "intergenic", true)}
 	wg.Done()
 }
 
@@ -193,8 +189,9 @@ func CreateIndex(annoFile string, chrLens map[string]int) *RtreeMap {
 }
 
 func createIndex(scanner *Scanner) *RtreeMap {
-	var trees RtreeMap
+	trees := make(RtreeMap)
 	regions := make(chan chunk)
+	treeChan := make(chan *tree)
 	debugElements := make(chan string)
 
 	if logrus.GetLevel() == logrus.DebugLevel {
@@ -208,10 +205,17 @@ func createIndex(scanner *Scanner) *RtreeMap {
 		chr := chunk.chr
 		feats := chunk.feats
 		length := float64(scanner.r.chrLens[chr])
-		go createTree(&trees, chr, length, feats, &wg)
+		go createTree(treeChan, chr, length, feats, &wg)
 	}
-	wg.Wait()
 
+	go func() {
+		wg.Wait()
+		close(treeChan)
+	}()
+
+	for t := range treeChan {
+		trees[t.chr] = t.tree
+	}
 	return &trees
 }
 
