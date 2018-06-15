@@ -209,8 +209,8 @@ func readGtf(r *FeatureReader) (f *Feature, err error) {
 		//r.line++
 		if err != nil {
 			if err == io.EOF {
-					break
-				}
+				break
+			}
 			return nil, &csv.ParseError{Err: err}
 		}
 		line = bytes.TrimSpace(line)
@@ -229,86 +229,10 @@ func readGtf(r *FeatureReader) (f *Feature, err error) {
 			if _, ok := r.chrLens[string(chr)]; !ok {
 				continue
 			}
-			if bytes.Equal(element, []byte("gene")) {
-				s, e := parseInterval(start, end)
-				f, err = parseFeature(chr, element, s-1, e)
-				if r.genes[1] == nil {
-					r.genes[1] = f
-				} else {
-					if f.Chr() != r.genes[1].Chr() {
-						tmp := f
-						f, err = selectFeature(r.genes[1], &r.genes, []byte("intergenic"), true, r.chrLens)
-						r.genes[1] = tmp
-						break
-					}
-					if f.Start() < r.genes[1].Start() {
-						logrus.Fatal("Annotation is not sorted")
-					}
-					if f.Start() <= r.genes[1].End() {
-						r.genes[1], err = parseFeature(chr, element, r.genes[1].Start(), float64(utils.Max(int(f.End()), int(r.genes[1].End()))))
-					} else {
-						f, err = selectFeature(f, &r.genes, []byte("intergenic"), true, r.chrLens)
-						break
-					}
-				}
-			} else if bytes.Equal(element, []byte("exon")) {
-				s, e := parseInterval(start, end)
-				f, err = parseFeature(chr, element, s-1, e)
-				if r.exons[1] == nil {
-					r.exons[1] = f
-				} else {
-					if f.Chr() != r.exons[1].Chr() {
-						tmp := f
-						f, err = selectFeature(r.exons[1], &r.exons, []byte("intron"), false, r.chrLens)
-						if f.Element() == "intron" {
-							if (r.genes[0] != nil && r.genes[1] != nil && f.Start() == r.genes[0].End() || f.End() == r.genes[1].Start()) || (r.genes[0] != nil && f.End() == r.genes[0].Start()) {
-								f = nil
-							}
-						}
-						r.exons[1] = tmp
-						break
-					}
-					if f.Start() < r.exons[1].Start() {
-						logrus.Fatal("Annotation is not sorted")
-					}
-					if f.Start() <= r.exons[1].End() {
-						r.exons[1], err = parseFeature(chr, element, r.exons[1].Start(), float64(utils.Max(int(f.End()), int(r.exons[1].End()))))
-					} else {
-						f, err = selectFeature(f, &r.exons, []byte("intron"), false, r.chrLens)
-						if f.Element() == "intron" {
-							if (r.genes[0] != nil && r.genes[1] != nil && f.Start() == r.genes[0].End() || f.End() == r.genes[1].Start()) || (r.genes[0] != nil && f.End() == r.genes[0].Start()) {
-								f = nil
-							}
-						}
-						break
-					}
-				}
-			}
+			s, e := parseInterval(start, end)
+			f, err = parseFeature(chr, element, s-1, e)
+			break
 		}
 	}
 	return
-}
-
-func mergeIntervals(intervals []*Feature) []*Feature {
-	sort.Sort(FeatureSlice(intervals))
-	out := make([]*Feature, 0)
-	x, intervals := intervals[0], intervals[1:]
-	for n, i := range intervals {
-		if i.Start() <= x.End() {
-			loc := rtreego.Point{x.Start()}
-			size := float64(utils.Max(int(i.End()), int(x.End()))) - x.Start()
-			rect, err := rtreego.NewRect(loc, []float64{size})
-			if err != nil {
-				log.Panic(err)
-			}
-			x.SetBounds(rect)
-		} else {
-			out = append(out, x)
-			x = i
-		}
-		if n == len(intervals)-1 {
-			out = append(out, x)
-		}
-	}
-	return out
 }
