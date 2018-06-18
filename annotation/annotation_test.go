@@ -6,15 +6,12 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"sort"
 	"testing"
 
 	"github.com/Sirupsen/logrus"
 
 	"github.com/dhconnelly/rtreego"
-)
-
-var (
-	annotationFiles = []string{"../data/coverage-test.bed", "../data/coverage-test.gtf.gz", "../data/coverage-test-shuffled.bed", "../data/coverage-test-shuffled.gtf.gz"}
 )
 
 func TestParseFeature(t *testing.T) {
@@ -329,21 +326,47 @@ func TestReadFeatures(t *testing.T) {
 	}
 
 	elems := map[string]int{
+		"exon":       106742,
+		"gene":       5397,
+		"intergenic": 3202,
+		"intron":     26230,
+	}
+	mergedElems := map[string]int{
 		"exon":       29431,
 		"gene":       3201,
 		"intergenic": 3202,
 		"intron":     26230,
 	}
 
-	for _, f := range annotationFiles {
-		m := CreateIndex(f, chrLens)
+	for _, i := range []struct {
+		f        string
+		expected map[string]int
+	}{
+		{
+			"../data/coverage-test.bed",
+			mergedElems,
+		},
+		{
+			"../data/coverage-test-shuffled.bed",
+			mergedElems,
+		},
+		{
+			"../data/coverage-test.gtf.gz",
+			elems,
+		},
+		{
+			"../data/coverage-test-shuffled.gtf.gz",
+			elems,
+		},
+	} {
+		m := CreateIndex(i.f, chrLens)
 		index := m.Get("chr1")
 		res := make(map[string]int)
 		for _, s := range QueryIndex(index, 0, 248956422) {
 			f := s.(*Feature)
 			res[f.Element()]++
 		}
-		for k, v := range elems {
+		for k, v := range i.expected {
 			if v != res[k] {
 				t.Errorf("(%s) Different number of %s features. Expected: %d, got %d", t.Name(), k, v, res[k])
 			}

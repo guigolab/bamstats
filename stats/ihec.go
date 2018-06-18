@@ -47,21 +47,8 @@ func (s *IHECstats) Collect(record *sam.Record) {
 	}
 
 	results := annotation.QueryIndex(rtree, mappingLocation.Start(), mappingLocation.End())
-	var filteredResults []rtreego.Spatial
-	for _, r := range results {
-		if r, ok := r.(*annotation.Feature); ok {
-			// if r.Element() == "intergenic" {
-			// 	if r.End()-r.Start() <= 1000 {
-			// 		continue
-			// 	}
-			// 	if !(mappingLocation.End() >= r.Start()+500 && mappingLocation.Start() <= r.End()-500) {
-			// 		continue
-			// 	}
-			// }
-			filteredResults = append(filteredResults, r)
-		}
-	}
-	mappingLocation.GetElements(&filteredResults, elements)
+
+	mappingLocation.GetElements(filterElements(results, mappingLocation.Start(), mappingLocation.End(), 500), elements, "gene_type")
 
 	// if _, isIntergenic := elements["intergenic"]; isIntergenic && len(elements) > 1 {
 	// 	fmt.Println(elements)
@@ -77,19 +64,47 @@ func NewIHECstats(index *annotation.RtreeMap) *IHECstats {
 	}
 }
 
+func filterElements(elements []rtreego.Spatial, start, end, offset float64) []rtreego.Spatial {
+	var filteredElements []rtreego.Spatial
+	for _, r := range elements {
+		if r, ok := r.(*annotation.Feature); ok {
+			if r.Element() == "intergenic" {
+				if r.End()-r.Start() < 2*offset {
+					continue
+				}
+				if end <= r.Start()+offset || start > r.End()-offset {
+					continue
+				}
+			}
+			filteredElements = append(filteredElements, r)
+		}
+	}
+	return filteredElements
+}
+
 func updateIHECcount(elems map[string]uint8, st *IHECstats) {
 
 	if len(elems) == 0 {
 		return
 	}
 
-	if _, isRRNA := elems["rRNA"]; isRRNA {
+	rRNAs := []string{
+		"rRNA",
+		"Mt_rRNA",
+	}
+
+	for _, gt := range rRNAs {
+		if _, isRRNA := elems[gt]; isRRNA {
+			st.RRNA++
+		}
+	}
+
+	if _, isRRNA := elems["Mt_rRNA"]; isRRNA {
 		st.RRNA++
-		return
 	}
 
 	if _, isIntergenic := elems["intergenic"]; isIntergenic {
 		st.Intergenic++
-		return
 	}
+
 }

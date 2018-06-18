@@ -38,16 +38,21 @@ func (loc *Location) String() string {
 }
 
 // GetElements returns all elements overlapping with buf
-func (loc *Location) GetElements(buf *[]rtreego.Spatial, elems map[string]uint8) {
-	for _, feature := range *buf {
+func (loc *Location) GetElements(buf []rtreego.Spatial, elems map[string]uint8, tags ...string) {
+	for _, feature := range buf {
 		if feature, ok := feature.(*Feature); ok {
 			start := math.Max(loc.Start(), feature.Start())
 			end := math.Min(loc.End(), feature.End())
 			if end <= start {
 				continue
 			}
+
 			if feature.Element() != "gene" {
 				elems[feature.Element()]++
+			} else {
+				for _, t := range tags {
+					elems[feature.Tag(t)]++
+				}
 			}
 		}
 	}

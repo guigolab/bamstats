@@ -22,14 +22,14 @@ type chunk struct {
 	feats chan rtreego.Spatial
 }
 
-// RtreeMap is a map of pointers to Rtree with string keys.
-// type RtreeMap map[string]*rtreego.Rtree
-type RtreeMap map[string]*rtreego.Rtree
-
 type tree struct {
 	chr  string
 	tree *rtreego.Rtree
 }
+
+// RtreeMap is a map of pointers to Rtree with string keys.
+// type RtreeMap map[string]*rtreego.Rtree
+type RtreeMap map[string]*rtreego.Rtree
 
 // Get returns the pointer to an Rtree for the specified chromosome and create a new Rtree if not present.
 func (t RtreeMap) Get(chr string) *rtreego.Rtree {
@@ -45,16 +45,13 @@ func (t RtreeMap) Len() int {
 	return len(t)
 }
 
-func scan(scanner *Scanner, regions chan chunk, elems chan string) {
+func scan(scanner *Scanner, regions chan chunk) {
 	regMap := make(map[string]chan rtreego.Spatial)
 	var chr, lastChr string
 	for scanner.Next() {
 		feature := scanner.Feat()
 		if feature == nil {
 			continue
-		}
-		if logrus.GetLevel() == logrus.DebugLevel {
-			elems <- feature.Out()
 		}
 		if len(chr) == 0 {
 			lastChr = feature.Chr()
@@ -73,22 +70,24 @@ func scan(scanner *Scanner, regions chan chunk, elems chan string) {
 	}
 	close(regMap[lastChr])
 	close(regions)
-	close(elems)
 	if scanner.Error() != nil {
 		logrus.Panic(scanner.Error())
 	}
 }
 
-func writeElements(items <-chan string) {
+func writeElements(items <-chan rtreego.Spatial, done chan<- struct{}) {
 	var w *bufio.Writer
 	out, _ := os.Create(debugElementsFile)
 	w = bufio.NewWriter(out)
 	logrus.Debugf("Writing index elements to %s", out.Name())
-	for item := range items {
-		w.WriteString(item)
+	itemSlice := NewFeatureSlice(chan2slice(items))
+	sort.Sort(itemSlice)
+	for _, item := range itemSlice {
+		w.WriteString(item.Out())
 		w.WriteRune('\n')
 	}
 	w.Flush()
+	done <- struct{}{}
 }
 
 func mergeIntervals(intervals []rtreego.Spatial) []*Feature {
@@ -123,24 +122,23 @@ func mergeIntervals(intervals []rtreego.Spatial) []*Feature {
 	return out
 }
 
-func interleaveFeatures(tree *rtreego.Rtree, start, end float64, element string, updated []byte, extremes bool) []*Feature {
-	features := QueryIndexByElement(tree, start, end, element)
-	merged := mergeIntervals(features)
+func interleaveFeatures(features []*Feature, start, end float64, element string, updated []byte, extremes bool) []*Feature {
 	var fs []*Feature
-	for i, f := range merged {
+
+	for i, f := range features {
 		fs = append(fs, f)
 		if extremes {
 			if i == 0 {
 				n, _ := parseFeature(f.chr, updated, start, f.Start())
 				fs = append(fs, n)
 			}
-			if i == len(merged)-1 {
+			if i == len(features)-1 {
 				n, _ := parseFeature(f.chr, updated, f.End(), end)
 				fs = append(fs, n)
 			}
 		}
 		if i > 0 {
-			g := merged[i-1]
+			g := features[i-1]
 			n, _ := parseFeature(f.chr, updated, g.End(), f.Start())
 			fs = append(fs, n)
 		}
@@ -148,22 +146,45 @@ func interleaveFeatures(tree *rtreego.Rtree, start, end float64, element string,
 	return fs
 }
 
-func updateIndex(index *rtreego.Rtree, start, end float64, feature, updated string, extremes bool) *rtreego.Rtree {
+func updateIndex(index *rtreego.Rtree, start, end float64, feature, updated string, extremes bool, elems chan rtreego.Spatial) *rtreego.Rtree {
 	if end-start <= 0 {
 		return index
 	}
 
 	var features []rtreego.Spatial
-	for _, f := range interleaveFeatures(index, start, end, feature, []byte(updated), extremes) {
+
+	genes := QueryIndexByElement(index, start, end, feature)
+	for _, i := range genes {
+		f := i.(*Feature)
 		features = append(features, f)
-		for _, g := range interleaveFeatures(index, f.Start(), f.End(), "exon", []byte("intron"), false) {
-			features = append(features, g)
+	}
+	mergedGenes := mergeIntervals(genes)
+	for _, f := range interleaveFeatures(mergedGenes, start, end, feature, []byte(updated), extremes) {
+		if f.Element() == updated {
+			features = append(features, f)
+			if logrus.GetLevel() == logrus.DebugLevel {
+				elems <- f
+			}
+		}
+		exons := QueryIndexByElement(index, f.Start(), f.End(), "exon")
+		for _, i := range exons {
+			f := i.(*Feature)
+			features = append(features, f)
+		}
+		mergedExons := mergeIntervals(exons)
+		for _, g := range interleaveFeatures(mergedExons, f.Start(), f.End(), "exon", []byte("intron"), false) {
+			if g.Element() == "intron" {
+				features = append(features, g)
+				if logrus.GetLevel() == logrus.DebugLevel {
+					elems <- g
+				}
+			}
 		}
 	}
 	return rtreego.NewTree(1, 25, 50, features...)
 }
 
-func chan2slice(c chan rtreego.Spatial) []rtreego.Spatial {
+func chan2slice(c <-chan rtreego.Spatial) []rtreego.Spatial {
 	var s []rtreego.Spatial
 	for item := range c {
 		s = append(s, item)
@@ -171,10 +192,17 @@ func chan2slice(c chan rtreego.Spatial) []rtreego.Spatial {
 	return s
 }
 
-func createTree(trees chan *tree, chr string, length float64, feats chan rtreego.Spatial, wg *sync.WaitGroup) {
+func createTree(trees chan *tree, chr string, length float64, feats chan rtreego.Spatial, wg *sync.WaitGroup, elems chan rtreego.Spatial) {
 	wg.Add(1)
-	tmpIndex := rtreego.NewTree(1, 25, 50, chan2slice(feats)...)
-	trees <- &tree{chr, updateIndex(tmpIndex, 0, length, "gene", "intergenic", true)}
+	featSlice := chan2slice(feats)
+	tmpIndex := rtreego.NewTree(1, 25, 50, featSlice...)
+	t := tree{chr, updateIndex(tmpIndex, 0, length, "gene", "intergenic", true, elems)}
+	trees <- &t
+	if logrus.GetLevel() == logrus.DebugLevel && length == 0 {
+		for _, f := range featSlice {
+			elems <- f.(*Feature)
+		}
+	}
 	wg.Done()
 }
 
@@ -192,30 +220,37 @@ func createIndex(scanner *Scanner) *RtreeMap {
 	trees := make(RtreeMap)
 	regions := make(chan chunk)
 	treeChan := make(chan *tree)
-	debugElements := make(chan string)
+	debugElements := make(chan rtreego.Spatial)
+	debugElemsDone := make(chan struct{})
 
 	if logrus.GetLevel() == logrus.DebugLevel {
-		go writeElements(debugElements)
+		go writeElements(debugElements, debugElemsDone)
 	}
 
-	go scan(scanner, regions, debugElements)
+	go scan(scanner, regions)
 
 	var wg sync.WaitGroup
 	for chunk := range regions {
 		chr := chunk.chr
 		feats := chunk.feats
 		length := float64(scanner.r.chrLens[chr])
-		go createTree(treeChan, chr, length, feats, &wg)
+		go createTree(treeChan, chr, length, feats, &wg, debugElements)
 	}
 
 	go func() {
 		wg.Wait()
 		close(treeChan)
+		close(debugElements)
 	}()
 
 	for t := range treeChan {
 		trees[t.chr] = t.tree
 	}
+
+	if logrus.GetLevel() == logrus.DebugLevel {
+		<-debugElemsDone
+	}
+
 	return &trees
 }
 
