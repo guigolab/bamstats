@@ -99,10 +99,6 @@ func updateIHECcount(elems map[string]uint8, st *IHECstats) {
 		}
 	}
 
-	if _, isRRNA := elems["Mt_rRNA"]; isRRNA {
-		st.RRNA++
-	}
-
 	if _, isIntergenic := elems["intergenic"]; isIntergenic {
 		st.Intergenic++
 	}
