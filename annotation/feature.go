@@ -2,6 +2,8 @@ package annotation
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/dhconnelly/rtreego"
 )
@@ -71,6 +73,7 @@ func NewFeatureSlice(intervals []rtreego.Spatial) FeatureSlice {
 type Feature struct {
 	location     *rtreego.Rect
 	chr, element []byte
+	tags         map[string][]byte
 }
 
 // Chr returns the chromosome of the feature
@@ -103,6 +106,16 @@ func (f *Feature) SetBounds(newLocation *rtreego.Rect) {
 	f.location = newLocation
 }
 
+// SetTags set feture tags
+func (f *Feature) SetTags(tags map[string][]byte) {
+	f.tags = tags
+}
+
+// Tag get a tag value from f
+func (f *Feature) Tag(key string) string {
+	return string(f.tags[key])
+}
+
 // String returns the string representation of a Feature
 func (f *Feature) String() string {
 	return fmt.Sprintf("%s:%.0f-%.0f:%s", f.Chr(), f.Start(), f.End(), f.Element())
@@ -119,10 +132,11 @@ func (f *Feature) Clone() *Feature {
 }
 
 // NewFeature returns a new instance of a Feature
-func NewFeature(chr, element []byte, rect *rtreego.Rect) *Feature {
+func NewFeature(chr []byte, element []byte, rect *rtreego.Rect) *Feature {
 	return &Feature{
 		rect,
 		chr,
 		element,
+		nil,
 	}
 }

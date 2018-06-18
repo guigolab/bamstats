@@ -171,6 +171,22 @@ func parseFeature(chr, element []byte, begin, end float64) (*Feature, error) {
 	return NewFeature(chr, element, rect), nil
 }
 
+func parseTags(b []byte) map[string][]byte {
+	m := make(map[string][]byte)
+	var k string
+	for i, tag := range bytes.Split(b, []byte(" ")) {
+		if i%2 == 0 {
+			k = string(tag)
+		} else {
+			m[k] = bytes.Trim(tag, `";`)
+			if k == "gene_type" {
+				break
+			}
+		}
+	}
+	return m
+}
+
 func readBed(r *FeatureReader) (f *Feature, err error) {
 	var line []byte
 	for {
@@ -226,11 +242,13 @@ func readGtf(r *FeatureReader) (f *Feature, err error) {
 			chr := fields[0]
 			start := fields[3]
 			end := fields[4]
+			tags := parseTags(fields[8])
 			if _, ok := r.chrLens[string(chr)]; !ok {
 				continue
 			}
 			s, e := parseInterval(start, end)
 			f, err = parseFeature(chr, element, s-1, e)
+			f.SetTags(tags)
 			break
 		}
 	}
