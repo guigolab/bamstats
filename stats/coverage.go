@@ -182,7 +182,7 @@ func (s *CoverageStats) Collect(record *sam.Record) {
 			return
 		}
 		results := annotation.QueryIndex(rtree, mappingLocation.Start(), mappingLocation.End())
-		mappingLocation.GetElements(&results, elements)
+		mappingLocation.GetElements(results, elements)
 	}
 	if record.IsSplit() {
 		updateCount(elements, s.Split)
