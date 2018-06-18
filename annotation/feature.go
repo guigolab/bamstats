@@ -16,6 +16,45 @@ func (s FeatureSlice) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 func (s FeatureSlice) Less(i, j int) bool {
+	var ci, cj interface{}
+	var err error
+	chri := strings.Replace(s[i].Chr(), "chr", "", -1)
+	chrj := strings.Replace(s[j].Chr(), "chr", "", -1)
+	ci, err = strconv.Atoi(chri)
+	if err != nil {
+		ci = chri
+	}
+	cj, err = strconv.Atoi(chrj)
+	if err != nil {
+		cj = chrj
+	}
+
+	m := map[byte]int8{
+		'X': 0,
+		'Y': 1,
+		'M': 2,
+	}
+
+	if _, ok := cj.(string); ok {
+		js := []byte(cj.(string))[0]
+		if _, ok := ci.(string); ok {
+			is := []byte(ci.(string))[0]
+			if is != js {
+				return m[is] < m[js]
+			}
+		} else {
+			return true
+		}
+	}
+	if _, ok := cj.(int); ok {
+		if _, ok := ci.(int); ok {
+			if ci.(int) != cj.(int) {
+				return ci.(int) < cj.(int)
+			}
+		} else {
+			return false
+		}
+	}
 	return s[i].Start() < s[j].Start()
 }
 

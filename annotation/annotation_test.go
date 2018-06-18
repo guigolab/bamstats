@@ -264,6 +264,65 @@ chr16	30975	31109	exon
 	os.Remove(debugElementsFile)
 }
 
+func TestSortFeatures(t *testing.T) {
+	bsorted := []byte(`chr1	11868	12227	exon
+chr2	12612	12721	exon
+chr3	12974	13052	exon
+chr4	13220	14501	exon
+chr5	15004	15038	exon
+chr6	15795	15947	exon
+chr7	16606	16765	exon
+chr8	16857	17055	exon
+chr9	17232	17436	exon
+chr10	17605	17742	exon
+chr11	17914	18061	exon
+chr12	18267	18366	exon
+chr13	24737	24891	exon
+chr14	29533	30039	exon
+chr15	30266	30667	exon
+chr16	30975	31109	exon
+chrX	13000	21000	exon
+chrY	11000	23000	exon
+chrM	22000	40000	exon
+`)
+	belements := []byte(`chr13	24737	24891	exon
+chr2	12612	12721	exon
+chrY	11000	23000	exon
+chr11	17914	18061	exon
+chr1	11868	12227	exon
+chrX	13000	21000	exon
+chr4	13220	14501	exon
+chr5	15004	15038	exon
+chr12	18267	18366	exon
+chr6	15795	15947	exon
+chr16	30975	31109	exon
+chr7	16606	16765	exon
+chrM	22000	40000	exon
+chr8	16857	17055	exon
+chr9	17232	17436	exon
+chr10	17605	17742	exon
+chr14	29533	30039	exon
+chr3	12974	13052	exon
+chr15	30266	30667	exon
+`)
+	var elements, sorted FeatureSlice
+	s := NewScanner(bytes.NewReader(bsorted), map[string]int{})
+	for s.Next() {
+		sorted = append(sorted, s.Feat())
+	}
+
+	s = NewScanner(bytes.NewReader(belements), map[string]int{})
+	for s.Next() {
+		elements = append(elements, s.Feat())
+	}
+	sort.Sort(elements)
+	for i, v := range elements {
+		if v.String() != sorted[i].String() {
+			t.Errorf("Wrong sort: expected %s, got %s", sorted[i], v)
+		}
+	}
+}
+
 func TestReadFeatures(t *testing.T) {
 	chrLens := map[string]int{
 		"chr1": 248956422,
