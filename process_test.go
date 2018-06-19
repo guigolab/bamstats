@@ -107,6 +107,10 @@ func TestCoverageUniq(t *testing.T) {
 		if !ok {
 			t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverage"])
 		}
+		_, ok = out["coverageUniq"].(*stats.CoverageStats)
+		if !ok {
+			t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverageUniq"])
+		}
 		out.OutputJSON(&b)
 		stats := readExpected(expectedCoverageUniqJSON, t)
 		if len(b.Bytes()) != len(stats) {
