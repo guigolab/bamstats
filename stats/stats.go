@@ -1,8 +1,10 @@
 package stats
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 
 	"github.com/guigolab/bamstats/sam"
@@ -47,6 +49,19 @@ func (sm *Map) Merge(stats chan Map) {
 // Add adds a new Stats object to sm
 func (sm Map) Add(key string, s Stats) {
 	sm[key] = s
+}
+
+// OutputJSON writes sm to the wrtier as JSON
+func (sm Map) OutputJSON(writer io.Writer) error {
+	b, err := json.MarshalIndent(sm, "", "\t")
+	if err != nil {
+		return err
+	}
+	writer.Write(b)
+	if w, ok := writer.(*bufio.Writer); ok {
+		w.Flush()
+	}
+	return nil
 }
 
 // NewMap creates and instance of a stats.Map

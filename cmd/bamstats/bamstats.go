@@ -5,6 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/guigolab/bamstats"
+	"github.com/guigolab/bamstats/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +34,9 @@ func run(cmd *cobra.Command, args []string) (err error) {
 	if err != nil {
 		return
 	}
-	bamstats.WriteOutput(output, allStats)
+
+	w := utils.NewWriter(output)
+	allStats.OutputJSON(w)
 
 	return
 }

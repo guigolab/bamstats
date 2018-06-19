@@ -12,7 +12,6 @@ import (
 	"github.com/guigolab/bamstats/config"
 	"github.com/guigolab/bamstats/sam"
 	"github.com/guigolab/bamstats/stats"
-	"github.com/guigolab/bamstats/utils"
 )
 
 func init() {
@@ -132,11 +131,6 @@ func Process(bamFile string, anno string, cpu int, maxBuf int, reads int, uniq b
 	}
 	log.Infof("Stats done in %v", time.Since(start))
 	return allStats, nil
-}
-
-func WriteOutput(output string, st stats.Map) {
-	out := utils.NewOutput(output)
-	utils.OutputJSON(out, st)
 }
 
 func makeStatsMap(index *annotation.RtreeMap, cfg *config.Config) stats.Map {

@@ -22,24 +22,16 @@ func Min(a, b int) int {
 	return b
 }
 
-// OutputJSON writes the json representation of stats to an io.Writer
-func OutputJSON(writer io.Writer, stats interface{}) {
-	b, err := json.MarshalIndent(stats, "", "\t")
-	Check(err)
-	writer.Write(b)
-	if w, ok := writer.(*bufio.Writer); ok {
-		w.Flush()
-	}
-}
-
-// NewOutput return a new io.Writer given an output file name. If the file name is '-' os.Stdout is returned.
-func NewOutput(output string) io.Writer {
+// NewWriter return a new io.Writer given an output file name. If the file name is '-' os.Stdout is returned.
+func NewWriter(output string) io.Writer {
 	switch output {
 	case "-":
 		return os.Stdout
 	default:
 		f, err := os.Create(output)
-		Check(err)
+		if err != nil {
+			return nil
+		}
 		return bufio.NewWriter(f)
 	}
 }
