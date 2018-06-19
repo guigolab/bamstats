@@ -13,7 +13,6 @@ import (
 	"unsafe"
 
 	"github.com/dhconnelly/rtreego"
-	"github.com/guigolab/bamstats/utils"
 )
 
 const (
@@ -71,7 +70,9 @@ func buffReader(r io.Reader) *bufio.Reader {
 		log.Fatal(err)
 	} else if isGz {
 		rdr, err := gzip.NewReader(br)
-		utils.Check(err)
+		if err != nil {
+			return nil
+		}
 		br = bufio.NewReader(rdr)
 	} else if isBz, err := isBzip2(br); err != nil {
 		log.Fatal(err)

@@ -10,7 +10,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/dhconnelly/rtreego"
-	"github.com/guigolab/bamstats/utils"
 )
 
 var (
@@ -210,7 +209,9 @@ func createTree(trees chan *tree, chr string, length float64, feats chan rtreego
 // for each chromosome and returns a RtreeMap having the chromosome names as keys.
 func CreateIndex(annoFile string, chrLens map[string]int) *RtreeMap {
 	f, err := os.Open(annoFile)
-	utils.Check(err)
+	if err != nil {
+		return nil
+	}
 	scanner := NewScanner(f, chrLens)
 
 	return createIndex(scanner)

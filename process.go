@@ -99,9 +99,13 @@ func waitProcess(st chan stats.Map, wg *sync.WaitGroup) {
 
 func getChrLens(bamFile string, cpu int) (chrs map[string]int) {
 	bf, err := os.Open(bamFile)
-	utils.Check(err)
+	if err != nil {
+		return nil
+	}
 	br, err := bam.NewReader(bf, cpu)
-	utils.Check(err)
+	if err != nil {
+		return nil
+	}
 	refs := br.Header().Refs()
 	chrs = make(map[string]int, len(refs))
 	for _, r := range refs {

@@ -2,19 +2,11 @@ package utils
 
 import (
 	"bufio"
-	"encoding/json"
 	"io"
 	"os"
-
-	log "github.com/Sirupsen/logrus"
 )
 
-func Check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
+// Max returns the maximum of two integers
 func Max(a, b int) int {
 	if a < b {
 		return b
@@ -22,6 +14,7 @@ func Max(a, b int) int {
 	return a
 }
 
+// Min returns the minimum of two integers
 func Min(a, b int) int {
 	if a < b {
 		return a
