@@ -41,7 +41,7 @@
 				"10": 2
 			},
 			"mappings": {
-				"ratio": 2.3730422401518747,
+				"ratio": 2.37304,
 				"count": 100000
 			}
 		},
@@ -1404,6 +1404,14 @@
 				"181572": 3,
 				"181767": 1
 			}
+		}
+	},
+	"rnaseq": {
+		"intergenic": 81,
+		"rRNA": 0,
+		"metrics": {
+			"fraction_mapped": 1,
+			"fraction_intergenic": 0.00192216
 		}
 	}
 }

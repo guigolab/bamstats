@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/guigolab/bamstats/stats"
-	"github.com/guigolab/bamstats/utils"
 )
 
 func checkTest(err error, t *testing.T) {
@@ -47,7 +46,7 @@ func TestGeneral(t *testing.T) {
 	if !ok {
 		t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
 	}
-	utils.OutputJSON(&b, out)
+	out.OutputJSON(&b)
 	stats := readExpected(expectedGeneralJSON, t)
 	if len(b.Bytes()) != len(stats) {
 		err := dump(b, "observed-general.json")
@@ -60,13 +59,14 @@ func TestGeneral(t *testing.T) {
 
 func TestCoverage(t *testing.T) {
 	var b bytes.Buffer
+	expectedMapLen := 3
 	for _, annotationFile := range annotationFiles {
 		b.Reset()
 		out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, false)
 		checkTest(err, t)
 		l := len(out)
-		if l > 2 {
-			t.Errorf("(Process) Expected StatsMap of length 2, got %d", l)
+		if l > expectedMapLen {
+			t.Errorf("(Process) Expected StatsMap of length %d, got %d", expectedMapLen, l)
 		}
 		_, ok := out["general"].(*stats.GeneralStats)
 		if !ok {
@@ -76,7 +76,7 @@ func TestCoverage(t *testing.T) {
 		if !ok {
 			t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverage"])
 		}
-		utils.OutputJSON(&b, out)
+		out.OutputJSON(&b)
 		stats := readExpected(expectedCoverageJSON, t)
 		if len(b.Bytes()) != len(stats) {
 			err := dump(b, "observed-coverage.json")
@@ -90,13 +90,14 @@ func TestCoverage(t *testing.T) {
 
 func TestCoverageUniq(t *testing.T) {
 	var b bytes.Buffer
+	expectedMapLen := 4
 	for _, annotationFile := range annotationFiles {
 		b.Reset()
 		out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, true)
 		checkTest(err, t)
 		l := len(out)
-		if l > 3 {
-			t.Errorf("(Process) Expected StatsMap of length 3, got %d", l)
+		if l > expectedMapLen {
+			t.Errorf("(Process) Expected StatsMap of length %d, got %d", expectedMapLen, l)
 		}
 		_, ok := out["general"].(*stats.GeneralStats)
 		if !ok {
@@ -106,7 +107,7 @@ func TestCoverageUniq(t *testing.T) {
 		if !ok {
 			t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverage"])
 		}
-		utils.OutputJSON(&b, out)
+		out.OutputJSON(&b)
 		stats := readExpected(expectedCoverageUniqJSON, t)
 		if len(b.Bytes()) != len(stats) {
 			err := dump(b, "observed-coverage-uniq.json")
