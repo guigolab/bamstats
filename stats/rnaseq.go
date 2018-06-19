@@ -23,6 +23,12 @@ type RNAseqStats struct {
 	index                     *annotation.RtreeMap
 }
 
+// Type returns the type of stats
+func (s *RNAseqStats) Type() string {
+	t := "rnaseq"
+	return t
+}
+
 // Merge updates counts from a channel of Stats instances.
 func (s *RNAseqStats) Merge(others chan Stats) {
 	for other := range others {

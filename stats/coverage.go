@@ -83,6 +83,15 @@ type CoverageStats struct {
 	index      *annotation.RtreeMap
 }
 
+// Type returns the type of stats
+func (s *CoverageStats) Type() string {
+	t := "coverage"
+	if s.Uniq {
+		t += "Uniq"
+	}
+	return t
+}
+
 // Update updates all counts from a Stats instance.
 func (s *CoverageStats) Update(other Stats) {
 	if other, ok := other.(*CoverageStats); ok {

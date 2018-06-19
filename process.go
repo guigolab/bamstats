@@ -134,14 +134,13 @@ func Process(bamFile string, anno string, cpu int, maxBuf int, reads int, uniq b
 }
 
 func makeStatsMap(index *annotation.RtreeMap, cfg *config.Config) stats.Map {
-	m := make(stats.Map)
-	m.Add("general", stats.NewGeneralStats())
+	m := stats.NewMap(stats.NewGeneralStats())
 	if index != nil {
-		m.Add("coverage", stats.NewCoverageStats(index, false))
+		m.Add(stats.NewCoverageStats(index, false))
 		if cfg.Uniq {
-			m.Add("coverageUniq", stats.NewCoverageStats(index, true))
+			m.Add(stats.NewCoverageStats(index, true))
 		}
-		m.Add("rnaseq", stats.NewIHECstats(index))
+		m.Add(stats.NewIHECstats(index))
 	}
 	return m
 }

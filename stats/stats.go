@@ -26,6 +26,7 @@ func (m fraction) MarshalJSON() ([]byte, error) {
 
 // Stats represents mapping statistics.
 type Stats interface {
+	Type() string
 	Update(other Stats)
 	Merge(others chan Stats)
 	Collect(record *sam.Record)
@@ -47,8 +48,8 @@ func (sm *Map) Merge(stats chan Map) {
 }
 
 // Add adds a new Stats object to sm
-func (sm Map) Add(key string, s Stats) {
-	sm[key] = s
+func (sm Map) Add(s Stats) {
+	sm[s.Type()] = s
 }
 
 // OutputJSON writes sm to the wrtier as JSON
@@ -64,19 +65,11 @@ func (sm Map) OutputJSON(writer io.Writer) error {
 	return nil
 }
 
-// NewMap creates and instance of a stats.Map
-// func NewMap(general, coverage, uniq bool) Map {
-// 	m := make(Map)
-// 	if general {
-// 		m["general"] = NewGeneralStats()
-// 	}
-// 	if coverage {
-// 		m["coverage"] = NewCoverageStats()
-// 	}
-// 	if uniq {
-// 		cs := NewCoverageStats()
-// 		cs.Uniq = true
-// 		m["coverageUniq"] = cs
-// 	}
-// 	return m
-// }
+//NewMap creates and instance of a stats.Map
+func NewMap(stats ...Stats) Map {
+	m := make(Map)
+	for _, s := range stats {
+		m.Add(s)
+	}
+	return m
+}

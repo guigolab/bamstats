@@ -38,6 +38,12 @@ type GeneralStats struct {
 	Pairs MappedPairsStats `json:"pairs,omitempty"`
 }
 
+// Type returns the type of stats
+func (s *GeneralStats) Type() string {
+	t := "general"
+	return t
+}
+
 // Merge updates counts from a channel of Stats instances.
 func (s *GeneralStats) Merge(others chan Stats) {
 	for other := range others {
