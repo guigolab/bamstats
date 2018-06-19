@@ -11,7 +11,7 @@ type MappedReadsStats struct {
 	Total      uint64 `json:"total,omitempty"`
 	Unmapped   uint64 `json:"unmapped,omitempty"`
 	Mapped     TagMap `json:"mapped,omitempty"`
-	Duplicated uint64 `json:"duplicates,omitempty"`
+	Duplicates uint64 `json:"duplicates,omitempty"`
 }
 
 // MappingsStats represents statistics for mappings
@@ -28,8 +28,8 @@ type MappedPairsStats struct {
 
 // MultimapStats represents statistics for multi-maps
 type MultimapStats struct {
-	Ratio float64 `json:"ratio"`
-	Count uint64  `json:"count"`
+	Ratio fraction `json:"ratio"`
+	Count uint64   `json:"count"`
 }
 
 // GeneralStats represents general mapping statistics
@@ -67,7 +67,7 @@ func (s *GeneralStats) Finalize() {
 func (s *MappedReadsStats) Update(other MappedReadsStats) {
 	s.Total += other.Total
 	s.Unmapped += other.Unmapped
-	s.Duplicated += other.Duplicated
+	s.Duplicates += other.Duplicates
 	s.Mapped.Update(other.Mapped)
 }
 
@@ -100,7 +100,7 @@ func (s *MappedPairsStats) FilterInsertSizes(percent float64) {
 
 // UpdateMappingsRatio updates ration of mappings vs total mapped reads.
 func (s *MappingsStats) UpdateMappingsRatio() {
-	s.Mappings.Ratio = float64(s.Mappings.Count) / float64(s.Mapped.Total())
+	s.Mappings.Ratio = fraction(s.Mappings.Count) / fraction(s.Mapped.Total())
 }
 
 // Unique returns the number of uniquely mapped reads.
@@ -155,7 +155,7 @@ func (s *GeneralStats) Collect(r *sam.Record) {
 			s.Pairs.InsertSizes[isLen]++
 		}
 		if r.IsDuplicate() {
-			s.Reads.Duplicated++
+			s.Reads.Duplicates++
 		}
 	}
 }

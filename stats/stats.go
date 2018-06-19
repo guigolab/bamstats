@@ -1,8 +1,26 @@
 package stats
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+
 	"github.com/guigolab/bamstats/sam"
 )
+
+type fraction float64
+
+func (m fraction) String() string {
+	return fmt.Sprintf("%.6g", float64(m))
+}
+
+func (m fraction) MarshalJSON() ([]byte, error) {
+	v, err := strconv.ParseFloat(m.String(), 64)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(v)
+}
 
 // Stats represents mapping statistics.
 type Stats interface {

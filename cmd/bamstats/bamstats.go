@@ -1,12 +1,10 @@
 package main
 
 import (
-	"os"
 	"runtime"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/guigolab/bamstats"
-	"github.com/guigolab/bamstats/stats"
 	"github.com/spf13/cobra"
 )
 
@@ -37,12 +35,6 @@ func run(cmd *cobra.Command, args []string) (err error) {
 	}
 	bamstats.WriteOutput(output, allStats)
 
-	m := &stats.IHECmetrics{}
-	err = m.Calculate(allStats)
-	if err != nil {
-		return
-	}
-	m.Output(os.Stdout)
 	return
 }
 

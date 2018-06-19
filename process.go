@@ -143,7 +143,7 @@ func makeStatsMap(index *annotation.RtreeMap, cfg *config.Config) stats.Map {
 		if cfg.Uniq {
 			m.Add("coverageUniq", stats.NewCoverageStats(index, true))
 		}
-		m.Add("ihec", stats.NewIHECstats(index))
+		m.Add("rnaseq", stats.NewIHECstats(index))
 	}
 	return m
 }

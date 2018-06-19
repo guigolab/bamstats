@@ -6,39 +6,68 @@ import (
 	"github.com/guigolab/bamstats/sam"
 )
 
-// IHECstats represents statistics for mapped reads
-type IHECstats struct {
-	Intergenic uint64 `json:"intergenic"`
-	RRNA       uint64 `json:"rRNA"`
-	index      *annotation.RtreeMap
+// RNAseqMetrics represents statistics for mapped reads
+type RNAseqMetrics struct {
+	Mapped     fraction `json:"fraction_mapped,omitempty"`
+	Intergenic fraction `json:"fraction_intergenic,omitempty"`
+	RRNA       fraction `json:"fraction_rrna,omitempty"`
+	Duplicates fraction `json:"fraction_duplicates,omitempty"`
+}
+
+// RNAseqStats represents statistics for mapped reads
+type RNAseqStats struct {
+	total, mapped, duplicates uint64
+	Intergenic                uint64         `json:"intergenic"`
+	RRNA                      uint64         `json:"rRNA"`
+	Metrics                   *RNAseqMetrics `json:"metrics,omitempty"`
+	index                     *annotation.RtreeMap
 }
 
 // Merge updates counts from a channel of Stats instances.
-func (s *IHECstats) Merge(others chan Stats) {
+func (s *RNAseqStats) Merge(others chan Stats) {
 	for other := range others {
-		if other, ok := other.(*IHECstats); ok {
+		if other, ok := other.(*RNAseqStats); ok {
 			s.Update(other)
 		}
 	}
 }
 
 // Update updates all counts from a Stats instance.
-func (s *IHECstats) Update(other Stats) {
-	if other, isIHEC := other.(*IHECstats); isIHEC {
+func (s *RNAseqStats) Update(other Stats) {
+	if other, isIHEC := other.(*RNAseqStats); isIHEC {
 		s.Intergenic += other.Intergenic
 		s.RRNA += other.RRNA
+		s.duplicates += other.duplicates
+		s.total += other.total
+		s.mapped += other.mapped
 	}
 }
 
 // Finalize updates dependent counts of a Stats instance.
-func (s *IHECstats) Finalize() {
+func (s *RNAseqStats) Finalize() {
+	if s.total > 0 {
+		s.Metrics.Mapped = fraction(s.mapped) / fraction(s.total)
+		if s.mapped > 0 {
+			s.Metrics.Intergenic = fraction(s.Intergenic) / fraction(s.mapped)
+			s.Metrics.RRNA = fraction(s.RRNA) / fraction(s.mapped)
+			s.Metrics.Duplicates = fraction(s.duplicates) / fraction(s.mapped)
+		}
+	}
 }
 
 // Collect collects general mapping statistics from a sam.Record.
-func (s *IHECstats) Collect(record *sam.Record) {
+func (s *RNAseqStats) Collect(record *sam.Record) {
 	elements := map[string]uint8{}
-	if s.index == nil || !record.IsPrimary() || record.IsUnmapped() {
+	if s.index == nil || !record.IsPrimary() {
 		return
+	}
+	s.total++
+	if record.IsUnmapped() {
+		return
+	}
+	s.mapped++
+	if record.IsDuplicate() {
+		s.duplicates++
 	}
 	mappingLocation := annotation.NewLocation(record.Ref.Name(), record.Start(), record.End())
 	rtree := s.index.Get(mappingLocation.Chrom())
@@ -50,17 +79,14 @@ func (s *IHECstats) Collect(record *sam.Record) {
 
 	mappingLocation.GetElements(filterElements(results, mappingLocation.Start(), mappingLocation.End(), 500), elements, "gene_type")
 
-	// if _, isIntergenic := elements["intergenic"]; isIntergenic && len(elements) > 1 {
-	// 	fmt.Println(elements)
-	// }
-
 	updateIHECcount(elements, s)
 }
 
 // NewIHECstats creates a new instance of IHECstats
-func NewIHECstats(index *annotation.RtreeMap) *IHECstats {
-	return &IHECstats{
-		index: index,
+func NewIHECstats(index *annotation.RtreeMap) *RNAseqStats {
+	return &RNAseqStats{
+		index:   index,
+		Metrics: &RNAseqMetrics{},
 	}
 }
 
@@ -82,7 +108,7 @@ func filterElements(elements []rtreego.Spatial, start, end, offset float64) []rt
 	return filteredElements
 }
 
-func updateIHECcount(elems map[string]uint8, st *IHECstats) {
+func updateIHECcount(elems map[string]uint8, st *RNAseqStats) {
 
 	if len(elems) == 0 {
 		return
