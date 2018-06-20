@@ -14,6 +14,7 @@ import (
 
 var (
 	debugElementsFile = "bamstats-coverage.elements.bed"
+	dumpElementsEnv   = "BAMSTATS_DUMP_ELEMENTS"
 )
 
 type chunk struct {
@@ -161,7 +162,7 @@ func updateIndex(index *rtreego.Rtree, start, end float64, feature, updated stri
 	for _, f := range interleaveFeatures(mergedGenes, start, end, feature, []byte(updated), extremes) {
 		if f.Element() == updated {
 			features = append(features, f)
-			if logrus.GetLevel() == logrus.DebugLevel {
+			if os.Getenv(dumpElementsEnv) != "" {
 				elems <- f
 			}
 		}
@@ -174,7 +175,7 @@ func updateIndex(index *rtreego.Rtree, start, end float64, feature, updated stri
 		for _, g := range interleaveFeatures(mergedExons, f.Start(), f.End(), "exon", []byte("intron"), false) {
 			if g.Element() == "intron" {
 				features = append(features, g)
-				if logrus.GetLevel() == logrus.DebugLevel {
+				if os.Getenv(dumpElementsEnv) != "" {
 					elems <- g
 				}
 			}
@@ -197,7 +198,7 @@ func createTree(trees chan *tree, chr string, length float64, feats chan rtreego
 	tmpIndex := rtreego.NewTree(1, 25, 50, featSlice...)
 	t := tree{chr, updateIndex(tmpIndex, 0, length, "gene", "intergenic", true, elems)}
 	trees <- &t
-	if logrus.GetLevel() == logrus.DebugLevel && length == 0 {
+	if os.Getenv(dumpElementsEnv) != "" && length == 0 {
 		for _, f := range featSlice {
 			elems <- f.(*Feature)
 		}
@@ -224,7 +225,7 @@ func createIndex(scanner *Scanner) *RtreeMap {
 	debugElements := make(chan rtreego.Spatial)
 	debugElemsDone := make(chan struct{})
 
-	if logrus.GetLevel() == logrus.DebugLevel {
+	if os.Getenv(dumpElementsEnv) != "" {
 		go writeElements(debugElements, debugElemsDone)
 	}
 
@@ -248,7 +249,7 @@ func createIndex(scanner *Scanner) *RtreeMap {
 		trees[t.chr] = t.tree
 	}
 
-	if logrus.GetLevel() == logrus.DebugLevel {
+	if os.Getenv(dumpElementsEnv) != "" {
 		<-debugElemsDone
 	}
 

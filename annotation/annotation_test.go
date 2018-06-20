@@ -9,8 +9,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/Sirupsen/logrus"
-
 	"github.com/dhconnelly/rtreego"
 )
 
@@ -245,7 +243,7 @@ chr14	29533	30039	exon
 chr15	30266	30667	exon
 chr16	30975	31109	exon
 `)
-	logrus.SetLevel(logrus.DebugLevel) // set debug level
+	os.Setenv(dumpElementsEnv, "yes")
 	debugElementsFile = ".test.debug.elfile.bed"
 	_ = createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}))
 	e, err := ioutil.ReadFile(debugElementsFile)
