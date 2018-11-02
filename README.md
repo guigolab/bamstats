@@ -40,9 +40,9 @@ The `--uniq` (or `-u`) command line flag allows reporting of genome coverage sta
 
 Some examples of the program output can be found in the `data` folder within the GitHub repository:
 
-- link:data/expected-general.json[General stats]
-- link:data/expected-coverage.json[Genomic coverage stats]
-- link:data/expected-coverage-uniq.json[Genomic coverage stats with uniquely mapped reads] (Note that the `coverageUniq` stats are reported as an additional JSON object)
+- [General Stats](data/expected-general.json)
+- [Genomic coverage stats](data/expected-coverage.json)
+- [Genomic coverage stats with uniquely mapped reads](data/expected-coverage-uniq.json) (Note that the `coverageUniq` stats are reported as an additional JSON object)
 
 ## License
 
