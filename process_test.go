@@ -20,6 +20,7 @@ var (
 	expectedGeneralJSON      = "data/expected-general.json"
 	expectedCoverageJSON     = "data/expected-coverage.json"
 	expectedCoverageUniqJSON = "data/expected-coverage-uniq.json"
+	expectedRNAseqJSON       = "data/expected-rnaseq.json"
 	annotationFiles          = []string{"data/coverage-test.bed", "data/coverage-test.gtf.gz", "data/coverage-test-shuffled.bed", "data/coverage-test-shuffled.gtf.gz"}
 	maxBuf                   = 1000000
 	reads                    = -1
@@ -120,6 +121,40 @@ func TestCoverageUniq(t *testing.T) {
 			}
 			t.Error("(Process) CoverageStats are different")
 		}
+	}
+}
+
+func TestRNAseq(t *testing.T) {
+	var b bytes.Buffer
+	bamFile := "data/rnaseq-test.bam"
+	annotationFile := "data/rnaseq.gtf.gz"
+	expectedMapLen := 3
+	out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, false)
+	checkTest(err, t)
+	l := len(out)
+	if l > expectedMapLen {
+		t.Errorf("(Process) Expected StatsMap of length %d, got %d", expectedMapLen, l)
+	}
+	_, ok := out["general"].(*stats.GeneralStats)
+	if !ok {
+		t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
+	}
+	_, ok = out["coverage"].(*stats.CoverageStats)
+	if !ok {
+		t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverage"])
+	}
+	_, ok = out["rnaseq"].(*stats.RNAseqStats)
+	if !ok {
+		t.Errorf("(Process) Wrong return type - expected RNAseqStats, got %T", out["rnaseq"])
+	}
+	out.OutputJSON(&b)
+	stats := readExpected(expectedRNAseqJSON, t)
+	if len(b.Bytes()) != len(stats) {
+		err := dump(b, "observed-rnaseq.json")
+		if err != nil {
+			t.Errorf("(Process) Debug dump error: %s", err)
+		}
+		t.Error("(Process) RNAseqStats are different")
 	}
 }
 

@@ -49,6 +49,11 @@ func (s *RNAseqStats) Update(other Stats) {
 	}
 }
 
+// UpdateTotal adds amount to total
+func (s *RNAseqStats) UpdateTotal(amount uint64) {
+	s.total += amount
+}
+
 // Finalize updates dependent counts of a Stats instance.
 func (s *RNAseqStats) Finalize() {
 	if s.total > 0 {

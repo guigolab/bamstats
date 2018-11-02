@@ -81,11 +81,18 @@ func process(bamFile string, index *annotation.RtreeMap, cpu int, maxBuf int, re
 	stat := <-statChan
 	stat.Merge(statChan)
 	for k, v := range stat {
-		v.Finalize()
-		if k == "general" {
+		switch k {
+		case "general":
 			s := v.(*stats.GeneralStats)
 			s.Reads.Total += br.Unmapped()
+			if s.Pairs.Total > 0 {
+				s.Pairs.Total += br.Unmapped() / 2
+			}
+		case "rnaseq":
+			s := v.(*stats.RNAseqStats)
+			s.UpdateTotal(br.Unmapped())
 		}
+		v.Finalize()
 	}
 
 	return stat, nil
