@@ -36,13 +36,28 @@ The above metrics are computed for continuous and split mapped reads. An aggrega
 
 The `--uniq` (or `-u`) command line flag allows reporting of genome coverage statistics for uniquely mapped reads too.
 
+## RNA-seq statistics
+
+The RNA-seq statistics follow [IHEC reccomendations for RNA-seq data quality metrics](https://github.com/IHEC/ihec-assay-standards/blob/199ec96b668114a90e39d3351358996287950dd1/qc_metrics/rna-seq/metrics.pdf). They include counts for the following regions:
+
+- intergenic (different from [coverage stats](#genome-coverage-statistics))
+- ribosomal RNA (`rRNA`)
+
+As long as other fractional metrics for the following read types:
+
+- mapped
+- intergenic
+- rRNA
+- duplicates
+
 ## Output examples:
 
 Some examples of the program output can be found in the `data` folder within the GitHub repository:
 
 - [General Stats](data/expected-general.json)
 - [Genomic coverage stats](data/expected-coverage.json)
-- [Genomic coverage stats with uniquely mapped reads](data/expected-coverage-uniq.json) (Note that the `coverageUniq` stats are reported as an additional JSON object)
+- [Genomic coverage stats with uniquely mapped reads](data/expected-coverage-uniq.json#L28) (Note that the `coverageUniq` stats are reported as an additional JSON object)
+- [RNA-seq stats](data/expected-rnaseq.json#L51)
 
 ## License
 
