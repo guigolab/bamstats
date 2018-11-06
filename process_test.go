@@ -58,6 +58,19 @@ func TestGeneral(t *testing.T) {
 	}
 }
 
+func TestIssue18(t *testing.T) {
+	out, err := Process("data/issue18.bam", "", runtime.GOMAXPROCS(-1), maxBuf, reads, false)
+	checkTest(err, t)
+	l := len(out)
+	if l != 1 {
+		t.Errorf("(Process) Expected StatsMap of length 1, got %d", l)
+	}
+	_, ok := out["general"].(*stats.GeneralStats).Reads.Mapped[1]
+	if !ok {
+		t.Errorf("(Process) Bad NH tag in read stats")
+	}
+}
+
 func TestCoverage(t *testing.T) {
 	var b bytes.Buffer
 	expectedMapLen := 3

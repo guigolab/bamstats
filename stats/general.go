@@ -144,7 +144,13 @@ func (s *GeneralStats) Collect(r *sam.Record) {
 		t := sam.NewTag("NH")
 		NH, _ = sam.NewAux(t, 0)
 	}
-	NHKey := int(NH.Value().(uint8))
+	var NHKey int
+	NHconv, ok := NH.Value().(uint8)
+	if ok {
+		NHKey = int(NHconv)
+	} else {
+		NHKey = int(NH.Value().(int8))
+	}
 	if r.IsUnmapped() {
 		s.Reads.Total++
 		s.Reads.Unmapped++
