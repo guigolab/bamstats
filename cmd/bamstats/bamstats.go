@@ -17,9 +17,6 @@ var (
 
 func run(cmd *cobra.Command, args []string) (err error) {
 	err = nil
-	if hasVersionFlag(cmd) {
-		return
-	}
 
 	// Set loglevel
 	level, err := log.ParseLevel(loglevel)
@@ -50,16 +47,17 @@ func setBamstatsFlags(c *cobra.Command) {
 	c.PersistentFlags().IntVarP(&maxBuf, "max-buf", "", 1000000, "maximum number of buffered records")
 	c.PersistentFlags().IntVarP(&reads, "reads", "n", -1, "number of records to process")
 	c.PersistentFlags().BoolVarP(&uniq, "uniq", "u", false, "output genomic coverage statistics for uniqely mapped reads too")
-	c.PersistentFlags().Bool("version", false, "show version and exit")
+	// c.PersistentFlags().Bool("version", false, "show version and exit")
 	c.MarkPersistentFlagRequired("input")
 }
 
 func main() {
 	var rootCmd = &cobra.Command{
-		Use:   "bamstats",
-		Short: "Mapping statistics",
-		Long:  "bamstats - compute mapping statistics",
-		RunE:  run,
+		Use:     "bamstats",
+		Short:   "Mapping statistics",
+		Long:    "bamstats - compute mapping statistics",
+		RunE:    run,
+		Version: bamstats.Version(),
 	}
 
 	setBamstatsFlags(rootCmd)
