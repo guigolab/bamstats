@@ -7,9 +7,11 @@
 
 ## Installation instructions
 
+Use one of the following methods to install `Bamstats`.
+
 ### Install a released version
 
-Here is an example for Linux 64bit:
+The easiest way is to download a pre-compiled binary from Github [releases](https://github.com/guigolab/bamstats/releases). Here is an example for Linux 64bit:
 
 ```
 export VERSION=0.3.1 OS=linux ARCH=amd64 BIN=/usr/local/bin
