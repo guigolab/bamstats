@@ -20,7 +20,7 @@ wget -O - https://github.com/guigolab/bamstats/releases/download/v${VERSION}/bam
 
 ### Install the latest version with go
 
-The following command will install the latest version from the master branch in the $GOPATH:
+The following command will install the latest version from the master branch into `$GOPATH`:
 
 ```
 go get github.com/guigolab/bamstats/cmd/bamstats
