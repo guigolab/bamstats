@@ -5,7 +5,7 @@ import "fmt"
 // Constants for Major and Minor version numbers.
 const (
 	VersionNumber      = 0.3
-	MinorVersionNumber = 1
+	MinorVersionNumber = 2
 )
 
 // PreVersionString indicates wheather the program is a pre-release.
