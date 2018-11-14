@@ -42,7 +42,7 @@ func run(cmd *cobra.Command, args []string) (err error) {
 }
 
 func setBamstatsFlags(c *cobra.Command) {
-	c.PersistentFlags().StringVarP(&bam, "input", "i", "", "input file")
+	c.PersistentFlags().StringVarP(&bam, "input", "i", "", "input file (required)")
 	c.PersistentFlags().StringVarP(&annotation, "annotaion", "a", "", "element annotation file")
 	c.PersistentFlags().StringVarP(&loglevel, "loglevel", "", "warn", "logging level")
 	c.PersistentFlags().StringVarP(&output, "output", "o", "-", "output file")
@@ -51,6 +51,7 @@ func setBamstatsFlags(c *cobra.Command) {
 	c.PersistentFlags().IntVarP(&reads, "reads", "n", -1, "number of records to process")
 	c.PersistentFlags().BoolVarP(&uniq, "uniq", "u", false, "output genomic coverage statistics for uniqely mapped reads too")
 	c.PersistentFlags().Bool("version", false, "show version and exit")
+	c.MarkPersistentFlagRequired("input")
 }
 
 func main() {
