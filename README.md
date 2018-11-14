@@ -5,12 +5,34 @@
 
 `Bamstats` is a command line tool written in `Go` for computing mapping statistics from a `BAM` file.
 
-It currently supports the following statistics:
+## Install
+
+### Install a released version
+
+Here is an example for Linux 64bit:
+
+```
+export VERSION=0.3.1 OS=linux ARCH=amd64 BIN=/usr/local/bin
+wget -O - https://github.com/guigolab/bamstats/releases/download/v${VERSION}/bamstats-v${VERSION}-${OS}-${ARCH}.tar.bz2 | tar xj --strip-components 3 -C ${BIN}
+```
+
+### Install the latest version with go
+
+The following command will install the latest version from the master branch in the $GOPATH:
+
+```
+go get github.com/guigolab/bamstats/cmd/bamstats
+```
+
+## Statistics 
+
+Bamstats currently supports the following mapping statistics:
 
 - general
 - genome coverage
+- RNA-seq
 
-## General statistics
+### General
 
 The general mapping statistics include:
 
@@ -22,7 +44,7 @@ The general mapping statistics include:
 
 If the data is paired-end, a section for read-pairs is also reported. In addition to the above metrics, the section contains a map of the insert size length and the corresponding support as number of reads.
 
-## Genome coverage statistics
+### Genome coverage
 
 The genome coverage ststistics are computed for RNA-seq data and include counts for the following genomic regions:
 
@@ -36,7 +58,7 @@ The above metrics are computed for continuous and split mapped reads. An aggrega
 
 The `--uniq` (or `-u`) command line flag allows reporting of genome coverage statistics for uniquely mapped reads too.
 
-## RNA-seq statistics
+### RNA-seq
 
 The RNA-seq statistics follow [IHEC reccomendations for RNA-seq data quality metrics](https://github.com/IHEC/ihec-assay-standards/blob/199ec96b668114a90e39d3351358996287950dd1/qc_metrics/rna-seq/metrics.pdf). They include counts for the following regions:
 
