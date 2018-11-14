@@ -5,7 +5,7 @@
 
 `Bamstats` is a command line tool written in `Go` for computing mapping statistics from a `BAM` file.
 
-## Install
+## Installation instructions
 
 ### Install a released version
 
@@ -24,9 +24,9 @@ The following command will install the latest version from the master branch in 
 go get github.com/guigolab/bamstats/cmd/bamstats
 ```
 
-## Statistics 
+## Provided statistics 
 
-Bamstats currently supports the following mapping statistics:
+`Bamstats` can currently compute the following mapping statistics:
 
 - general
 - genome coverage
@@ -74,7 +74,7 @@ As long as other fractional metrics for the following read types:
 
 ## Output examples:
 
-Some examples of the program output can be found in the `data` folder within the GitHub repository:
+Some examples of the program output can be found in the `data` folder ot this GitHub repository:
 
 - [General Stats](data/expected-general.json)
 - [Genomic coverage stats](data/expected-coverage.json)
@@ -83,4 +83,4 @@ Some examples of the program output can be found in the `data` folder within the
 
 ## License
 
-This software is release under a BSD-style license that can be found in the `LICENSE` file.
+This software is release under a BSD-style license. Please check the `LICENSE` file for more details.
