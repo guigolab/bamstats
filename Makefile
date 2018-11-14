@@ -51,16 +51,16 @@ $(COMPRESSED_BINARIES:%=upload-%): upload-%: prepareRelease
 
 prepareRelease: 
 	$(eval TAG := $(shell git describe --abbrev=0 --tags))
-	$(eval DESC := $(shell git cat-file -p  $(shell git rev-parse $(TAG)) | tail -n+6))
+	$(eval NAME := $(shell git cat-file -p  $(shell git rev-parse $(TAG)) | tail -n+6))
 	$(eval LDFLAGS := -ldflags "-X github.com/guigolab/bamstats.PreVersionString=")
 	$(eval PRE := -p)
 
 release: prepareRelease compress
 
 pushRelease: release
-	$(eval VER := $(shell bin/bamstats --version | cut -d' ' -f3 | sed 's/^/v/'))
+	$(eval VER := $(shell bin/$(OS)/$(ARCH)/bamstats --version | cut -d' ' -f3 | sed 's/^/v/'))
 	@[[ $(VER) == $(TAG) ]] && git push && git push --tags || echo "Wrong release version"
-	@[[ $(VER) == $(TAG) ]] && (github-release release -t $(TAG) $(PRE) -d "$(DESC)" || true) || true
+	@[[ $(VER) == $(TAG) ]] && (github-release release -t $(TAG) $(PRE) -n "$(NAME)" || true) || true
 	@[[ $(VER) == $(TAG) ]]	&& $(MAKE) $(COMPRESSED_BINARIES:%=upload-%) || true
 
 test:
