@@ -8,7 +8,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/dhconnelly/rtreego"
 )
 

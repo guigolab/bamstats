@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/biogo/hts/bam"
 	"github.com/biogo/hts/bgzf"
 	"github.com/biogo/hts/sam"

@@ -1,8 +1,0 @@
-*.[568]
-[568].out
-bin/
-pkg/
-misc/
-cmd/cmd
-*.swp
-_*

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/biogo/hts/sam"
 	"github.com/guigolab/bamstats/annotation"
 )

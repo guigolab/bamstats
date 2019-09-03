@@ -1,13 +1,18 @@
 language: go
 
+env:
+  - GO111MODULE=on
+
 go:
-  - "1.8"
-  - "1.9"
-  - "1.10"
+  - "1.11.x"
+  - "1.12.x"
   - "tip"
 
 before_install:
   - go get github.com/mattn/goveralls
-  - go get golang.org/x/tools/cmd/cover
+
+install:
+  - go mod download
+  
 script:
   - $HOME/gopath/bin/goveralls -service=travis-ci

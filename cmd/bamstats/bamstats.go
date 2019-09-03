@@ -3,7 +3,7 @@ package main
 import (
 	"runtime"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/guigolab/bamstats"
 	"github.com/guigolab/bamstats/utils"
 	"github.com/spf13/cobra"

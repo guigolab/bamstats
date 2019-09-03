@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/biogo/hts/bam"
 	"github.com/guigolab/bamstats/annotation"
 	"github.com/guigolab/bamstats/config"
