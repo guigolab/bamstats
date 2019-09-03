@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"runtime/debug"
 
 	"github.com/sirupsen/logrus"
 	"github.com/dhconnelly/rtreego"
@@ -46,6 +47,14 @@ func (t RtreeMap) Len() int {
 }
 
 func scan(scanner *Scanner, regions chan chunk) {
+	defer func() {
+		close(regions)
+		if r := recover(); r != nil {
+			logrus.Debugf("%s", debug.Stack())
+			os.Exit(1)
+		}
+	}()
+
 	regMap := make(map[string]chan rtreego.Spatial)
 	var chr, lastChr string
 	for scanner.Next() {
@@ -68,11 +77,17 @@ func scan(scanner *Scanner, regions chan chunk) {
 		}
 		regMap[chr] <- feature
 	}
-	close(regMap[lastChr])
-	close(regions)
 	if scanner.Error() != nil {
 		logrus.Panic(scanner.Error())
 	}
+	nChroms := len(regMap)
+	if nChroms == 0 {
+		logrus.Panic("Error reading annotation file: no chromosomes found")
+	}
+	if regMap[lastChr] != nil {
+		close(regMap[lastChr])
+	}
+	logrus.Infof("Annotation scanned: %d chromosomes found", len(regMap))
 }
 
 func writeElements(items <-chan rtreego.Spatial, done chan<- struct{}) {
