@@ -318,6 +318,106 @@ chr15	30266	30667	exon
 	}
 }
 
+func TestIssue23(t *testing.T) {
+	chr := []byte("chr1")
+	element := []byte("exon")
+	elements := []rtreego.Spatial{
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{11869}, []float64{358}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12010}, []float64{47}, t),
+		},		
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12613}, []float64{108}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12975}, []float64{77}, t),
+		},		
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{13221}, []float64{153}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12179}, []float64{48}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12613}, []float64{84}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{13221}, []float64{1188}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{13453}, []float64{217}, t),
+		},
+	}
+
+	intron := []byte("intron")
+	expected := []*Feature{
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{11869}, []float64{358}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  intron,
+			location: newRect(rtreego.Point{12227}, []float64{386}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12613}, []float64{108}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  intron,
+			location: newRect(rtreego.Point{12721}, []float64{254}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{12975}, []float64{77}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  intron,
+			location: newRect(rtreego.Point{13052}, []float64{169}, t),
+		},
+		&Feature{
+			chr:      chr,
+			element:  element,
+			location: newRect(rtreego.Point{13221}, []float64{1188}, t),
+		},
+	}
+	results := interleaveFeatures(mergeIntervals(elements), 11869, 14409, "exon", []byte("intron"), false)
+	if len(results) != len(expected) {
+		t.Errorf("(MergeElements) Lengths of merged results differ from expected results.\ngot: %v \nexp: %v)", len(results), len(expected))
+	}
+	for i, e := range expected {
+		if e.String() != results[i].String() {
+			t.Errorf("(MergeElements) merged results error.\ngot: %v \nexp: %v", results[i], e)
+		}
+	}
+}
+
 func TestReadFeatures(t *testing.T) {
 	chrLens := map[string]int{
 		"chr1": 248956422,

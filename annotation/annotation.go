@@ -98,12 +98,12 @@ func writeElements(items <-chan rtreego.Spatial, done chan<- struct{}) {
 	done <- struct{}{}
 }
 
-func mergeIntervals(intervals []rtreego.Spatial) []*Feature {
-	sort.Sort(NewFeatureSlice(intervals))
+func mergeIntervals(in []rtreego.Spatial) []*Feature {
+	intervals := NewFeatureSlice(in)
+	sort.Sort(intervals)
 	var out []*Feature
 	var x *Feature
-	for n, i := range intervals {
-		f := i.(*Feature)
+	for n, f := range intervals {
 		if n == 0 {
 			x = f
 		}
@@ -131,7 +131,7 @@ func mergeIntervals(intervals []rtreego.Spatial) []*Feature {
 }
 
 func interleaveFeatures(features []*Feature, start, end float64, element string, updated []byte, extremes bool) []*Feature {
-	var fs []*Feature
+	var fs FeatureSlice
 
 	for i, f := range features {
 		fs = append(fs, f)
@@ -151,6 +151,7 @@ func interleaveFeatures(features []*Feature, start, end float64, element string,
 			fs = append(fs, n)
 		}
 	}
+	sort.Sort(fs)
 	return fs
 }
 
