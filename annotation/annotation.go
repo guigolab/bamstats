@@ -56,20 +56,13 @@ func scan(scanner *Scanner, regions chan chunk) {
 	}()
 
 	regMap := make(map[string]chan rtreego.Spatial)
-	var chr, lastChr string
+	var chr string
 	for scanner.Next() {
 		feature := scanner.Feat()
 		if feature == nil {
 			continue
 		}
-		if len(chr) == 0 {
-			lastChr = feature.Chr()
-		}
 		chr = feature.Chr()
-		if lastChr != chr {
-			close(regMap[lastChr])
-			lastChr = chr
-		}
 		_, ok := regMap[chr]
 		if !ok {
 			regMap[chr] = make(chan rtreego.Spatial)
@@ -77,15 +70,15 @@ func scan(scanner *Scanner, regions chan chunk) {
 		}
 		regMap[chr] <- feature
 	}
+	for ref := range regMap {
+		close(regMap[ref])
+	}
 	if scanner.Error() != nil {
 		logrus.Panic(scanner.Error())
 	}
 	nChroms := len(regMap)
 	if nChroms == 0 {
 		logrus.Panic("Error reading annotation file: no chromosomes found")
-	}
-	if regMap[lastChr] != nil {
-		close(regMap[lastChr])
 	}
 	logrus.Infof("Annotation scanned: %d chromosomes found", len(regMap))
 }
