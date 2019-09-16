@@ -5,12 +5,12 @@ import (
 	"log"
 	"math"
 	"os"
+	"runtime/debug"
 	"sort"
 	"sync"
-	"runtime/debug"
 
-	"github.com/sirupsen/logrus"
 	"github.com/dhconnelly/rtreego"
+	"github.com/sirupsen/logrus"
 )
 
 var (
