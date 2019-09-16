@@ -73,6 +73,8 @@ func NewFeatureSlice(intervals []rtreego.Spatial) FeatureSlice {
 type Feature struct {
 	location     *rtreego.Rect
 	chr, element []byte
+	score        int
+	strand       byte
 	tags         map[string][]byte
 }
 
@@ -94,6 +96,19 @@ func (f *Feature) End() float64 {
 // Element returns the element of the feature
 func (f *Feature) Element() string {
 	return string(f.element)
+}
+
+// Score returns the element of the feature
+func (f *Feature) Score() string {
+	if f.score < 0 {
+		return "."
+	}
+	return strconv.Itoa(f.score)
+}
+
+// Strand returns the element of the feature
+func (f *Feature) Strand() string {
+	return string(f.strand)
 }
 
 // Bounds returns the location of the feature. It is used within the Rtree.
@@ -118,25 +133,27 @@ func (f *Feature) Tag(key string) string {
 
 // String returns the string representation of a Feature
 func (f *Feature) String() string {
-	return fmt.Sprintf("%s:%.0f-%.0f:%s", f.Chr(), f.Start(), f.End(), f.Element())
+	return fmt.Sprintf("%s:%.0f-%.0f:%s:%s:%s", f.Chr(), f.Start(), f.End(), f.Element(), f.Score(), f.Strand())
 }
 
 // Out returns the string representation of a Feature
 func (f *Feature) Out() string {
-	return fmt.Sprintf("%s\t%.0f\t%.0f\t%s", f.Chr(), f.Start(), f.End(), f.Element())
+	return fmt.Sprintf("%s\t%.0f\t%.0f\t%s\t%s\t%s", f.Chr(), f.Start(), f.End(), f.Element(), f.Score(), f.Strand())
 }
 
 // Clone returns a clone of f
 func (f *Feature) Clone() *Feature {
-	return NewFeature(f.chr, f.element, f.location)
+	return NewFeature(f.chr, f.element, f.score, f.strand, f.location)
 }
 
 // NewFeature returns a new instance of a Feature
-func NewFeature(chr []byte, element []byte, rect *rtreego.Rect) *Feature {
+func NewFeature(chr []byte, element []byte, score int, strand byte, rect *rtreego.Rect) *Feature {
 	return &Feature{
 		rect,
 		chr,
 		element,
+		score,
+		strand,
 		nil,
 	}
 }

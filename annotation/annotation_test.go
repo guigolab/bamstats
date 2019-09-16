@@ -13,9 +13,11 @@ import (
 )
 
 func TestParseFeature(t *testing.T) {
-	e := bytes.Split([]byte(`chr1	11868	12227	exon`), []byte("\t"))
+	e := bytes.Split([]byte(`chr1	11868	12227	exon	.	+`), []byte("\t"))
 	chr := e[0]
 	elem := e[3]
+	score := parseScore(e[4])
+	strand := e[5][0]
 	start, end := parseInterval(e[1], e[2])
 	if start != float64(11868) {
 		t.Errorf("(parseInterval) expected %s, got %v", e[1], start)
@@ -23,7 +25,7 @@ func TestParseFeature(t *testing.T) {
 	if end != float64(12227) {
 		t.Errorf("(parseInterval) expected %s, got %v", e[2], end)
 	}
-	f, err := parseFeature(chr, elem, start, end)
+	f, err := parseFeature(chr, elem, score, strand, start, end)
 	if err != nil {
 		t.Errorf("(parseFeature) Got error: %s", err)
 	}
@@ -226,26 +228,26 @@ func TestMergeIntervals(t *testing.T) {
 }
 
 func TestWriteElements(t *testing.T) {
-	elements := []byte(`chr1	11868	12227	exon
-chr2	12612	12721	exon
-chr3	12974	13052	exon
-chr4	13220	14501	exon
-chr5	15004	15038	exon
-chr6	15795	15947	exon
-chr7	16606	16765	exon
-chr8	16857	17055	exon
-chr9	17232	17436	exon
-chr10	17605	17742	exon
-chr11	17914	18061	exon
-chr12	18267	18366	exon
-chr13	24737	24891	exon
-chr14	29533	30039	exon
-chr15	30266	30667	exon
-chr16	30975	31109	exon
+	elements := []byte(`chr1	11868	12227	exon	.	+
+chr2	12612	12721	exon	.	+
+chr3	12974	13052	exon	.	+
+chr4	13220	14501	exon	.	+
+chr5	15004	15038	exon	.	+
+chr6	15795	15947	exon	.	+
+chr7	16606	16765	exon	.	+
+chr8	16857	17055	exon	.	+
+chr9	17232	17436	exon	.	+
+chr10	17605	17742	exon	.	+
+chr11	17914	18061	exon	.	+
+chr12	18267	18366	exon	.	+
+chr13	24737	24891	exon	.	+
+chr14	29533	30039	exon	.	+
+chr15	30266	30667	exon	.	+
+chr16	30975	31109	exon	.	+
 `)
 	os.Setenv(dumpElementsEnv, "yes")
 	debugElementsFile = ".test.debug.elfile.bed"
-	_ = createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}))
+	createIndex(NewScanner(bytes.NewReader(elements), map[string]int{}))
 	e, err := ioutil.ReadFile(debugElementsFile)
 	if os.IsNotExist(err) {
 		t.Fatal("(createIndex) Debug elements file not found")
@@ -256,7 +258,7 @@ chr16	30975	31109	exon
 	if bytes.Compare(elements, e) != 0 {
 		t.Fatalf("(createIndex) Debug elements file contents do not match the expected value")
 	}
-	os.Remove(debugElementsFile)
+	// os.Remove(debugElementsFile)
 }
 
 func TestSortFeatures(t *testing.T) {
@@ -331,7 +333,7 @@ func TestIssue23(t *testing.T) {
 			chr:      chr,
 			element:  element,
 			location: newRect(rtreego.Point{12010}, []float64{47}, t),
-		},		
+		},
 		&Feature{
 			chr:      chr,
 			element:  element,
@@ -341,7 +343,7 @@ func TestIssue23(t *testing.T) {
 			chr:      chr,
 			element:  element,
 			location: newRect(rtreego.Point{12975}, []float64{77}, t),
-		},		
+		},
 		&Feature{
 			chr:      chr,
 			element:  element,

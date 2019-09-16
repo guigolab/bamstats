@@ -137,17 +137,17 @@ func interleaveFeatures(features []*Feature, start, end float64, element string,
 		fs = append(fs, f)
 		if extremes {
 			if i == 0 && f.Start() > start {
-				n, _ := parseFeature(f.chr, updated, start, f.Start())
+				n, _ := parseFeature(f.chr, updated, f.score, f.strand, start, f.Start())
 				fs = append(fs, n)
 			}
 			if i == len(features)-1 && f.End() < end {
-				n, _ := parseFeature(f.chr, updated, f.End(), end)
+				n, _ := parseFeature(f.chr, updated, f.score, f.strand, f.End(), end)
 				fs = append(fs, n)
 			}
 		}
 		if i > 0 {
 			g := features[i-1]
-			n, _ := parseFeature(f.chr, updated, g.End(), f.Start())
+			n, _ := parseFeature(f.chr, updated, f.score, f.strand, g.End(), f.Start())
 			fs = append(fs, n)
 		}
 	}

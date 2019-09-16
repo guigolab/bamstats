@@ -6,6 +6,7 @@ import (
 	"compress/bzip2"
 	"compress/gzip"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -109,7 +110,7 @@ scan:
 			log.Fatal("Cannot guess type. Try increasing the peek buffer.")
 		}
 		switch c := bytes.Count(line, []byte{'\t'}); c + 1 {
-		case 4:
+		case 4, 5, 6:
 			format = BED
 			break scan
 		case 9:
@@ -162,14 +163,14 @@ func parseInterval(b, e []byte) (begin, end float64) {
 	return
 }
 
-func parseFeature(chr, element []byte, begin, end float64) (*Feature, error) {
+func parseFeature(chr, element []byte, score int, strand byte, begin, end float64) (*Feature, error) {
 	loc := rtreego.Point{begin}
 	size := end - begin
 	rect, err := rtreego.NewRect(loc, []float64{size})
 	if err != nil {
 		return nil, err
 	}
-	return NewFeature(chr, element, rect), nil
+	return NewFeature(chr, element, score, strand, rect), nil
 }
 
 func parseTags(b []byte) map[string][]byte {
@@ -191,8 +192,7 @@ func parseTags(b []byte) map[string][]byte {
 func readBed(r *FeatureReader) (f *Feature, err error) {
 	var line []byte
 	for {
-		line, err = r.r.ReadBytes('\n')
-		//r.line++
+		line, err = r.r.ReadBytes('\n') //r.line++
 		if err != nil {
 			if err == io.EOF {
 				return f, err
@@ -211,10 +211,23 @@ func readBed(r *FeatureReader) (f *Feature, err error) {
 	start := fields[1]
 	end := fields[2]
 	element := fields[3]
-
+	score := -1
+	if len(fields) > 4 {
+		s := string(fields[4])
+		if s != "." {
+			score, err = strconv.Atoi(s)
+			if err != nil {
+				return nil, &csv.ParseError{Err: err}
+			}
+		}
+	}
+	strand := byte('.')
+	if len(fields) > 5 && len(fields[5]) == 1 {
+		strand = fields[5][0]
+	}
 	s, e := parseInterval(start, end)
 
-	return parseFeature(chr, element, s, e)
+	return parseFeature(chr, element, score, strand, s, e)
 }
 
 func readGtf(r *FeatureReader) (f *Feature, err error) {
@@ -243,15 +256,32 @@ func readGtf(r *FeatureReader) (f *Feature, err error) {
 			chr := fields[0]
 			start := fields[3]
 			end := fields[4]
+			score := parseScore(fields[5])
+			if len(fields[6]) != 1 {
+				return nil, &csv.ParseError{Err: errors.New("Invalid format for strand field")}
+			}
+			strand := fields[6][0]
 			tags := parseTags(fields[8])
 			if _, ok := r.chrLens[string(chr)]; !ok {
 				continue
 			}
 			s, e := parseInterval(start, end)
-			f, err = parseFeature(chr, element, s-1, e)
+			f, err = parseFeature(chr, element, score, strand, s-1, e)
 			f.SetTags(tags)
 			break
 		}
 	}
 	return
+}
+
+func parseScore(sf []byte) int {
+	s := string(sf)
+	if s == "." {
+		return -1
+	}
+	score, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
+	}
+	return score
 }
