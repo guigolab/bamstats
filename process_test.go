@@ -25,8 +25,8 @@ var (
 		"coverageUniq": "data/expected-coverage-uniq.json",
 		"rnaseq":       "data/expected-rnaseq.json",
 	}
-	expectedMapLenCoverage     = 3
-	expectedMapLenCoverageUniq = 4
+	expectedMapLenCoverage     = 4
+	expectedMapLenCoverageUniq = 5
 	annotationFiles            = []string{"data/coverage-test.bed", "data/coverage-test.gtf.gz", "data/coverage-test-shuffled.bed", "data/coverage-test-shuffled.gtf.gz"}
 	maxBuf                     = 1000000
 	reads                      = -1

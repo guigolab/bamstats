@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/biogo/hts/bam"
 	"github.com/guigolab/bamstats/annotation"
 	"github.com/guigolab/bamstats/config"
 	"github.com/guigolab/bamstats/sam"
 	"github.com/guigolab/bamstats/stats"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -148,6 +148,7 @@ func makeStatsMap(index *annotation.RtreeMap, cfg *config.Config) stats.Map {
 			m.Add(stats.NewCoverageStats(index, true))
 		}
 		m.Add(stats.NewIHECstats(index))
+		m.Add(stats.NewStrandStats(index, 0.8, 30))
 	}
 	return m
 }
