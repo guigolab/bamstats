@@ -26,6 +26,7 @@
 		}
 	},
 	"general": {
+		"protocol": "PairedEnd",
 		"reads": {
 			"total": 42140,
 			"mapped": {

@@ -34,8 +34,9 @@ type MultimapStats struct {
 
 // GeneralStats represents general mapping statistics
 type GeneralStats struct {
-	Reads MappingsStats    `json:"reads,omitempty"`
-	Pairs MappedPairsStats `json:"pairs,omitempty"`
+	Protocol string           `json:"protocol"`
+	Reads    MappingsStats    `json:"reads,omitempty"`
+	Pairs    MappedPairsStats `json:"pairs,omitempty"`
 }
 
 // Type returns the type of stats
@@ -56,6 +57,9 @@ func (s *GeneralStats) Merge(others chan Stats) {
 // Update updates all counts from a Stats instance.
 func (s *GeneralStats) Update(other Stats) {
 	if other, ok := other.(*GeneralStats); ok {
+		if s.Protocol == "" {
+			s.Protocol = other.Protocol
+		}
 		s.Reads.Update(other.Reads)
 		s.Pairs.Update(other.Pairs)
 		s.Pairs.MappedReadsStats.UpdateUnmapped()
@@ -139,6 +143,12 @@ func NewMappedPairsStats() *MappedPairsStats {
 
 // Collect collects general mapping statistics from a sam.Record.
 func (s *GeneralStats) Collect(r *sam.Record) {
+	if s.Protocol == "" {
+		s.Protocol = "SingleEnd"
+		if r.IsPaired() {
+			s.Protocol = "PairedEnd"
+		}
+	}
 	NH, hasNH := r.Tag([]byte("NH"))
 	if !hasNH {
 		t := sam.NewTag("NH")
