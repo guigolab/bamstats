@@ -25,9 +25,11 @@ var (
 		"coverageUniq": "data/expected-coverage-uniq.json",
 		"rnaseq":       "data/expected-rnaseq.json",
 	}
-	annotationFiles = []string{"data/coverage-test.bed", "data/coverage-test.gtf.gz", "data/coverage-test-shuffled.bed", "data/coverage-test-shuffled.gtf.gz"}
-	maxBuf          = 1000000
-	reads           = -1
+	expectedMapLenCoverage     = 3
+	expectedMapLenCoverageUniq = 4
+	annotationFiles            = []string{"data/coverage-test.bed", "data/coverage-test.gtf.gz", "data/coverage-test-shuffled.bed", "data/coverage-test-shuffled.gtf.gz"}
+	maxBuf                     = 1000000
+	reads                      = -1
 )
 
 func TestGeneral(t *testing.T) {
@@ -69,7 +71,7 @@ func TestIssue18(t *testing.T) {
 
 func TestCoverage(t *testing.T) {
 	var b bytes.Buffer
-	expectedMapLen := 3
+	expectedMapLen := expectedMapLenCoverage
 	for _, annotationFile := range annotationFiles {
 		b.Reset()
 		out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, false)
@@ -100,7 +102,7 @@ func TestCoverage(t *testing.T) {
 
 func TestCoverageUniq(t *testing.T) {
 	var b bytes.Buffer
-	expectedMapLen := 4
+	expectedMapLen := expectedMapLenCoverageUniq
 	for _, annotationFile := range annotationFiles {
 		b.Reset()
 		out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, true)
@@ -137,7 +139,7 @@ func TestRNAseq(t *testing.T) {
 	var b bytes.Buffer
 	bamFile := "data/rnaseq-test.bam"
 	annotationFile := "data/rnaseq.gtf.gz"
-	expectedMapLen := 3
+	expectedMapLen := expectedMapLenCoverage
 	out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, false)
 	checkTest(err, t)
 	l := len(out)
