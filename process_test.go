@@ -2,6 +2,8 @@ package bamstats
 
 import (
 	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
@@ -16,24 +18,17 @@ func checkTest(err error, t *testing.T) {
 }
 
 var (
-	bamFile                  = "data/process-test.bam"
-	expectedGeneralJSON      = "data/expected-general.json"
-	expectedCoverageJSON     = "data/expected-coverage.json"
-	expectedCoverageUniqJSON = "data/expected-coverage-uniq.json"
-	expectedRNAseqJSON       = "data/expected-rnaseq.json"
-	annotationFiles          = []string{"data/coverage-test.bed", "data/coverage-test.gtf.gz", "data/coverage-test-shuffled.bed", "data/coverage-test-shuffled.gtf.gz"}
-	maxBuf                   = 1000000
-	reads                    = -1
+	bamFile      = "data/process-test.bam"
+	expectedJSON = map[string]string{
+		"general":      "data/expected-general.json",
+		"coverage":     "data/expected-coverage.json",
+		"coverageUniq": "data/expected-coverage-uniq.json",
+		"rnaseq":       "data/expected-rnaseq.json",
+	}
+	annotationFiles = []string{"data/coverage-test.bed", "data/coverage-test.gtf.gz", "data/coverage-test-shuffled.bed", "data/coverage-test-shuffled.gtf.gz"}
+	maxBuf          = 1000000
+	reads           = -1
 )
-
-func readExpected(path string, t *testing.T) []byte {
-	f, err := os.Open(path)
-	checkTest(err, t)
-	var b bytes.Buffer
-	_, err = b.ReadFrom(f)
-	checkTest(err, t)
-	return b.Bytes()
-}
 
 func TestGeneral(t *testing.T) {
 	var b bytes.Buffer
@@ -48,7 +43,8 @@ func TestGeneral(t *testing.T) {
 		t.Errorf("(Process) Wrong return type - expected GeneralStats, got %T", out["general"])
 	}
 	out.OutputJSON(&b)
-	stats := readExpected(expectedGeneralJSON, t)
+	stats := readStats([]string{"general"}, t)
+	// stats := readExpected(expectedGeneralJSON, t)
 	if len(b.Bytes()) != len(stats) {
 		err := dump(b, "observed-general.json")
 		if err != nil {
@@ -90,8 +86,8 @@ func TestCoverage(t *testing.T) {
 		if !ok {
 			t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverage"])
 		}
-		out.OutputJSON(&b)
-		stats := readExpected(expectedCoverageJSON, t)
+		stats.NewMap(out["coverage"]).OutputJSON(&b)
+		stats := readStats([]string{"coverage"}, t)
 		if len(b.Bytes()) != len(stats) {
 			err := dump(b, "observed-coverage.json")
 			if err != nil {
@@ -125,8 +121,8 @@ func TestCoverageUniq(t *testing.T) {
 		if !ok {
 			t.Errorf("(Process) Wrong return type - expected CoverageStats, got %T", out["coverageUniq"])
 		}
-		out.OutputJSON(&b)
-		stats := readExpected(expectedCoverageUniqJSON, t)
+		stats.NewMap(out["coverageUniq"]).OutputJSON(&b)
+		stats := readStats([]string{"coverageUniq"}, t)
 		if len(b.Bytes()) != len(stats) {
 			err := dump(b, "observed-coverage-uniq.json")
 			if err != nil {
@@ -160,8 +156,8 @@ func TestRNAseq(t *testing.T) {
 	if !ok {
 		t.Errorf("(Process) Wrong return type - expected RNAseqStats, got %T", out["rnaseq"])
 	}
-	out.OutputJSON(&b)
-	stats := readExpected(expectedRNAseqJSON, t)
+	stats.NewMap(out["rnaseq"]).OutputJSON(&b)
+	stats := readStats([]string{"rnaseq"}, t)
 	if len(b.Bytes()) != len(stats) {
 		err := dump(b, "observed-rnaseq.json")
 		if err != nil {
@@ -193,4 +189,24 @@ func dump(b bytes.Buffer, fname string) error {
 	defer s.Close()
 	_, err = s.Write(b.Bytes())
 	return err
+}
+
+func readStats(keys []string, t *testing.T) []byte {
+	stats := make(map[string]interface{})
+	for _, k := range keys {
+		stats[k] = readJSON(expectedJSON[k], t)
+	}
+	b, err := json.MarshalIndent(stats, "", "\t")
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
+func readJSON(path string, t *testing.T) interface{} {
+	b, err := ioutil.ReadFile(path)
+	checkTest(err, t)
+	var m map[string]interface{}
+	json.Unmarshal(b, &m)
+	return m
 }
