@@ -1,62 +1,10 @@
 {
-	"coverage": {
-		"total": {
-			"exonic_intronic": 5702,
-			"intron": 59116,
-			"exon": 237142,
-			"intergenic": 8604,
-			"others": 276,
-			"total": 310840
-		},
-		"continuous": {
-			"exonic_intronic": 5647,
-			"intron": 59105,
-			"exon": 205810,
-			"intergenic": 8602,
-			"others": 265,
-			"total": 279429
-		},
-		"split": {
-			"exonic_intronic": 55,
-			"intron": 11,
-			"exon": 31332,
-			"intergenic": 2,
-			"others": 11,
-			"total": 31411
-		}
-	},
-	"general": {
-		"protocol": "SingleEnd",
-		"reads": {
-			"total": 310840,
-			"mapped": {
-				"1": 285741,
-				"2": 13103,
-				"3": 5031,
-				"4": 1783,
-				"5": 1387,
-				"6": 863,
-				"7": 1625,
-				"8": 638,
-				"9": 388,
-				"10": 281
-			},
-			"duplicates": 197951,
-			"mappings": {
-				"ratio": 1.48597,
-				"count": 461899
-			}
-		},
-		"pairs": {}
-	},
-	"rnaseq": {
-		"intergenic": 7225,
-		"rRNA": 170,
-		"metrics": {
-			"fraction_mapped": 1,
-			"fraction_intergenic": 0.0232435,
-			"fraction_rrna": 0.000546905,
-			"fraction_duplicates": 0.636826
-		}
+	"intergenic": 7225,
+	"rRNA": 170,
+	"metrics": {
+		"fraction_mapped": 1,
+		"fraction_intergenic": 0.0232435,
+		"fraction_rrna": 0.000546905,
+		"fraction_duplicates": 0.636826
 	}
 }
