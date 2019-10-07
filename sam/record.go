@@ -74,6 +74,10 @@ func (r *Record) IsDuplicate() bool {
 	return r.Flags&sam.Duplicate == sam.Duplicate
 }
 
+func (r *Record) IsQCFail() bool {
+	return r.Flags&sam.QCFail == sam.QCFail
+}
+
 func (r *Record) GetBlocks() []*annotation.Location {
 	blocks := make([]*annotation.Location, 0, 10)
 	ref := r.Ref.Name()
