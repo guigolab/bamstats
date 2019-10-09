@@ -24,6 +24,7 @@ var (
 		"coverage":     "data/expected-coverage.json",
 		"coverageUniq": "data/expected-coverage-uniq.json",
 		"rnaseq":       "data/expected-rnaseq.json",
+		"strand":       "data/expected-strand.json",
 	}
 	expectedMapLenCoverage     = 4
 	expectedMapLenCoverageUniq = 5
@@ -72,7 +73,7 @@ func TestIssue18(t *testing.T) {
 func TestCoverage(t *testing.T) {
 	var b bytes.Buffer
 	expectedMapLen := expectedMapLenCoverage
-	for _, annotationFile := range annotationFiles {
+	for _, annotationFile := range append(annotationFiles, "data/coverage-test-merged.bed", "data/coverage-test-merged-shuffled.bed") {
 		b.Reset()
 		out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, false)
 		checkTest(err, t)
@@ -103,7 +104,7 @@ func TestCoverage(t *testing.T) {
 func TestCoverageUniq(t *testing.T) {
 	var b bytes.Buffer
 	expectedMapLen := expectedMapLenCoverageUniq
-	for _, annotationFile := range annotationFiles {
+	for _, annotationFile := range append(annotationFiles, "data/coverage-test-merged.bed", "data/coverage-test-merged-shuffled.bed") {
 		b.Reset()
 		out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, true)
 		checkTest(err, t)
@@ -166,6 +167,33 @@ func TestRNAseq(t *testing.T) {
 			t.Errorf("(Process) Debug dump error: %s", err)
 		}
 		t.Error("(Process) RNAseqStats are different")
+	}
+}
+
+func TestStrand(t *testing.T) {
+	var b bytes.Buffer
+	expectedMapLen := expectedMapLenCoverage
+	for _, annotationFile := range annotationFiles {
+		b.Reset()
+		out, err := Process(bamFile, annotationFile, runtime.GOMAXPROCS(-1), maxBuf, reads, false)
+		checkTest(err, t)
+		l := len(out)
+		if l > expectedMapLen {
+			t.Errorf("(Process) Expected StatsMap of length %d, got %d", expectedMapLen, l)
+		}
+		_, ok := out["strand"].(*stats.StrandStats)
+		if !ok {
+			t.Errorf("(Process) Wrong return type - expected StrandStats, got %T", out["coverage"])
+		}
+		stats.NewMap(out["strand"]).OutputJSON(&b)
+		stats := readStats([]string{"strand"}, t)
+		if len(b.Bytes()) != len(stats) {
+			err := dump(b, "observed-strand.json")
+			if err != nil {
+				t.Errorf("(Process) Debug dump error: %s", err)
+			}
+			t.Error("(Process) StrandStats are different")
+		}
 	}
 }
 

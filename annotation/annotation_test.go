@@ -444,11 +444,11 @@ func TestReadFeatures(t *testing.T) {
 	}{
 		{
 			"../data/coverage-test.bed",
-			mergedElems,
+			elems,
 		},
 		{
 			"../data/coverage-test-shuffled.bed",
-			mergedElems,
+			elems,
 		},
 		{
 			"../data/coverage-test.gtf.gz",
@@ -457,6 +457,14 @@ func TestReadFeatures(t *testing.T) {
 		{
 			"../data/coverage-test-shuffled.gtf.gz",
 			elems,
+		},
+		{
+			"../data/coverage-test-merged.bed",
+			mergedElems,
+		},
+		{
+			"../data/coverage-test-merged-shuffled.bed",
+			mergedElems,
 		},
 	} {
 		m := CreateIndex(i.f, chrLens)
