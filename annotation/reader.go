@@ -180,9 +180,6 @@ func parseTags(b []byte) map[string][]byte {
 			k = string(tag)
 		} else {
 			m[k] = bytes.Trim(tag, `";`)
-			if k == "gene_type" {
-				break
-			}
 		}
 	}
 	return m
