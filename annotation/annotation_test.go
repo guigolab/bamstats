@@ -331,7 +331,7 @@ func TestIssue23(t *testing.T) {
 			chr:      chr,
 			element:  element,
 			location: newRect(rtreego.Point{12010}, []float64{47}, t),
-		},		
+		},
 		&Feature{
 			chr:      chr,
 			element:  element,
@@ -341,7 +341,7 @@ func TestIssue23(t *testing.T) {
 			chr:      chr,
 			element:  element,
 			location: newRect(rtreego.Point{12975}, []float64{77}, t),
-		},		
+		},
 		&Feature{
 			chr:      chr,
 			element:  element,
@@ -454,6 +454,10 @@ func TestReadFeatures(t *testing.T) {
 		},
 		{
 			"../data/coverage-test-shuffled.gtf.gz",
+			elems,
+		},
+		{
+			"../data/coverage-test-nogenes.gtf.gz",
 			elems,
 		},
 	} {

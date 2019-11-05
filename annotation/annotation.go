@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime/debug"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/dhconnelly/rtreego"
@@ -155,21 +156,60 @@ func interleaveFeatures(features []*Feature, start, end float64, element string,
 	return fs
 }
 
-func updateIndex(index *rtreego.Rtree, start, end float64, feature, updated string, extremes bool, elems chan rtreego.Spatial) *rtreego.Rtree {
+func getGenes(index *rtreego.Rtree, start, end float64) []rtreego.Spatial {
+	genes := QueryIndexByElement(index, start, end, "gene")
+	if len(genes) == 0 {
+		exons := QueryIndexByElement(index, start, end, "exon")
+		geneMap := make(map[string]FeatureSlice)
+		for _, f := range NewFeatureSlice(exons) {
+			geneMap[f.Tag("gene_id")] = append(geneMap[f.Tag("gene_id")], f)
+		}
+		for g, l := range geneMap {
+			var start, end float64
+			start = math.MaxFloat64
+			for _, e := range geneMap[g] {
+				if e.Start() < start {
+					start = e.Start()
+				}
+				if e.End() > end {
+					end = e.End()
+				}
+			}
+			f, err := parseFeature(
+				l[0].chr,
+				[]byte("gene"),
+				start,
+				end,
+			)
+			if err == nil {
+				f.SetTags(l[0].tags)
+				for k := range f.tags {
+					if !strings.HasPrefix(k, "gene") {
+						delete(f.tags, k)
+					}
+				}
+				genes = append(genes, f)
+			}
+		}
+	}
+	return genes
+}
+
+func updateIndex(index *rtreego.Rtree, start, end float64, elems chan rtreego.Spatial) *rtreego.Rtree {
 	if end-start <= 0 {
 		return index
 	}
 
 	var features []rtreego.Spatial
+	genes := getGenes(index, start, end)
 
-	genes := QueryIndexByElement(index, start, end, feature)
 	for _, i := range genes {
 		f := i.(*Feature)
 		features = append(features, f)
 	}
 	mergedGenes := mergeIntervals(genes)
-	for _, f := range interleaveFeatures(mergedGenes, start, end, feature, []byte(updated), extremes) {
-		if f.Element() == updated {
+	for _, f := range interleaveFeatures(mergedGenes, start, end, "gene", []byte("intergenic"), true) {
+		if f.Element() == "intergenic" {
 			features = append(features, f)
 			if os.Getenv(dumpElementsEnv) != "" {
 				elems <- f
@@ -205,7 +245,7 @@ func createTree(trees chan *tree, chr string, length float64, feats chan rtreego
 	wg.Add(1)
 	featSlice := chan2slice(feats)
 	tmpIndex := rtreego.NewTree(1, 25, 50, featSlice...)
-	t := tree{chr, updateIndex(tmpIndex, 0, length, "gene", "intergenic", true, elems)}
+	t := tree{chr, updateIndex(tmpIndex, 0, length, elems)}
 	trees <- &t
 	if os.Getenv(dumpElementsEnv) != "" && length == 0 {
 		for _, f := range featSlice {
