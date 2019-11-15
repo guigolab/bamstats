@@ -25,8 +25,23 @@ func (r *Record) IsUniq() bool {
 	if !hasNH {
 		return false
 	}
-	NHval := NH.Value().(uint8)
-	return NHval == 1
+	switch v := NH.Value().(type) {
+	case int8:
+		return v == 1
+	case uint8:
+		return v == 1
+	case int16:
+		return v == 1
+	case uint16:
+		return v == 1
+	case uint32:
+		return v == 1
+	case int32:
+		return v == 1
+	case float32:
+		return v == 1
+	}
+	return false
 }
 
 func (r *Record) IsSplit() bool {
