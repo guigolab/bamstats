@@ -1,12 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"runtime"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/guigolab/bamstats"
 	"github.com/guigolab/bamstats/utils"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+)
+
+var (
+	version = "dev"
+	commit  = ""
+	date    = ""
 )
 
 var (
@@ -25,7 +32,12 @@ func run(cmd *cobra.Command, args []string) (err error) {
 	}
 	log.SetLevel(level)
 	// Get stats
-	log.Infof("Running %s %s", cmd.Use, bamstats.Version())
+	logger := log.WithFields(log.Fields{
+		"version":   version,
+		"commit":    commit,
+		"buildTime": date,
+	})
+	logger.Infof("Running %s", cmd.Use)
 	log.Infof("Using %v out of %v logical CPUs", cpu, runtime.NumCPU())
 	allStats, err := bamstats.Process(bam, annotation, cpu, maxBuf, reads, uniq)
 	if err != nil {
@@ -49,6 +61,19 @@ func setBamstatsFlags(c *cobra.Command) {
 	c.PersistentFlags().BoolVarP(&uniq, "uniq", "u", false, "output genomic coverage statistics for uniqely mapped reads too")
 	// c.PersistentFlags().Bool("version", false, "show version and exit")
 	c.MarkPersistentFlagRequired("input")
+
+	c.SetVersionTemplate(`{{with .Name}}{{printf "== %s ==\n" .}}{{end}}{{printf "%s\n" .Version}}`)
+}
+
+func buildVersion(version, commit, date string) string {
+	var result = fmt.Sprintf("version: %s", version)
+	if commit != "" {
+		result = fmt.Sprintf("%s\ncommit: %s", result, commit)
+	}
+	if date != "" {
+		result = fmt.Sprintf("%s\nbuilt at: %s", result, date)
+	}
+	return result
 }
 
 func main() {
@@ -57,7 +82,7 @@ func main() {
 		Short:   "Mapping statistics",
 		Long:    "bamstats - compute mapping statistics",
 		RunE:    run,
-		Version: bamstats.Version(),
+		Version: buildVersion(version, commit, date),
 	}
 
 	setBamstatsFlags(rootCmd)
