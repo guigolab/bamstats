@@ -2,3 +2,4 @@
 bin/
 tmp/
 dist/
+.test.debug.elfile.bed
