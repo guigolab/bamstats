@@ -1,0 +1,31 @@
+# Goreleaser config file for bamstats
+before:
+  hooks:
+    - go mod tidy
+builds:
+- env:
+  - CGO_ENABLED=0
+  main: ./cmd/bamstats/main.go
+  ldflags: -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }} -X main.date={{ .Date }}
+archives:
+- name_template: '{{ .ProjectName }}-{{ if ne .Version "dev" }}v{{ end }}{{ .Version }}-{{ .Os }}-{{ .Arch }}'
+  replacements:
+    386: i386
+    amd64: x86_64
+checksum:
+  name_template: '{{ .ProjectName }}_checksums.txt'
+snapshot:
+  name_template: "dev"
+changelog:
+  sort: desc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+    - 'goreleaser'
+    - '^Bump'
+release:
+  github:
+    owner: guigolab
+    name: bamstats
+  name_template: "Version {{.Version}}"
