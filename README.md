@@ -26,7 +26,7 @@ The following command will install the latest version from the master branch int
 go get github.com/guigolab/bamstats/cmd/bamstats
 ```
 
-## Provided statistics 
+## Provided statistics
 
 `Bamstats` can currently compute the following mapping statistics:
 
@@ -82,6 +82,8 @@ Some examples of the program output can be found in the `data` folder ot this Gi
 - [Genomic coverage stats](data/expected-coverage.json)
 - [Genomic coverage stats with uniquely mapped reads](data/expected-coverage-uniq.json#L28) (Note that the `coverageUniq` stats are reported as an additional JSON object)
 - [RNA-seq stats](data/expected-rnaseq.json#L51)
+
+Please see [here](output_fields.md) for a complete description of the output fields and how they are calculated.
 
 ## License
 
